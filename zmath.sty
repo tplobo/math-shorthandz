@@ -56,7 +56,7 @@
 % ##############################################################################
 
 \NeedsTeXFormat{LaTeX2e}[2020/10/01]
-\ProvidesPackage{zmath}[2026/10/09 v1.0.0 smart math typesetting utilities]
+\ProvidesPackage{zmath}[2026/10/12 v1.1.0 smart math typesetting utilities]
 
 % ------------------------------------------------------------------------------
 % Required packages
@@ -772,13 +772,13 @@
 \ExplSyntaxOff
 
 % ==============================================================================
-% \zscript *[ll] *[ul] {nucleus} *[lr] *[ur]
+% \zscript + *[ll] *[ul] {nucleus} *[lr] *[ur]
 % ------------------------------------------------------------------------------
 % Attaches up to four scripts to a nucleus: leading (pre-indexed) subscript
 % LL and superscript UL, and trailing subscript LR and superscript UR.
 % Omitting an argument suppresses it. Safe in text, inline, and display mode.
 %
-% Every script is wrapped in the macro `zscript-font` when it is stored. The
+% Every script is wrapped in the macro `zscript-wrapper` when it is stored. The
 % option is mode-free and takes any macro accepting one argument, but three
 % settings are recommended, each with its own caveats:
 %   \symup  (default) math letters, Greek letters, digits and signs are typed
@@ -790,10 +790,24 @@
 %           a label needs \text{...}.
 % The nucleus is never wrapped.
 %
-% Scripts are boxes placed explicitly, never by TeX's script machinery, so
-% they are free to overlap the nucleus. An unstarred script is set one style
-% smaller than the nucleus. A star before a script additionally scales it by
-% `zscript-scale-<style>`, where <style> (display, text, script,
+% The switch `zscript-adaptative` (true | false, default true; any value other
+% than `true` counts as false) selects how scripts are placed. True: from the
+% edges of the nucleus, as described below. False: by TeX itself, as if typed
+% {}_{LL}^{UL} {nucleus}_{LR}^{UR}, i.e. hanging from the baseline by font
+% parameters (the traditional placement). A large operator then still takes
+% its scripts at the sides in every style (like \nolimits), and no space is
+% added between leading scripts and the nucleus. The position and frame
+% options are ignored; the wrapper and the star scaling still apply.
+%
+% A leading + flips the switch for this call alone, whatever its value: with
+% `zscript-adaptative` true the call is placed by TeX, with it false the call
+% is placed from the edges of the nucleus. The + must directly follow the
+% command name; a nucleus that is a lone + must be braced, {+}.
+%
+% When adaptive, scripts are boxes placed explicitly, never by TeX's script
+% machinery, so they are free to overlap the nucleus. An unstarred script is
+% set one style smaller than the nucleus. A star before a script additionally
+% scales it by `zscript-scale-<style>`, where <style> (display, text, script,
 % scriptscript) is the style of the NUCLEUS; the same four factors apply to
 % all four scripts. The switch `zscript-scale-absolute` (see GLOBAL) selects
 % the meaning: true (default) -> normal size x factor; false -> unstarred
@@ -815,8 +829,9 @@
 %   script  ul | ur | ll | lr
 %   axis    v (vertical) | h (horizontal)
 % and zscript-<mode>-<before|after|above|below> for the frame. Every key
-% exists for both modes. The scales zscript-scale-<style>, the switch
-% zscript-scale-absolute and the font zscript-font are mode-free.
+% exists for both modes. The scales zscript-scale-<style>, the switches
+% zscript-scale-absolute and zscript-adaptative, and the wrapper
+% zscript-wrapper are mode-free.
 %
 % Coordinates: x positive to the right, y positive upward.
 %   ur, ul  v = y of the script's BOTTOM edge, from the nucleus TOP edge.
@@ -835,6 +850,8 @@
 %   \zscript[i][2]{A}                  % trailing sub/sup, unscaled
 %   \zscript*[I]*[K]{M}*[J]*[L]        % all four scripts, scaled
 %   \zscript[\mu][\symit{p}]{R}[\text{pre-ion}][-1]   % one of each kind
+%   \zscript+{k}[T]                    % this call only: the opposite placement
+%   {\setkeys{zmath}{zscript-adaptative=false} \zscript{k}[T]}   % TeX's own
 % ==============================================================================
 
   % \zmath@script@opt {key suffix} {macro suffix} {default} — declares the
@@ -877,7 +894,8 @@
   \zmath@script@opt{scale-script}{scale@script}{0.55}
   \zmath@script@opt{scale-scriptscript}{scale@scriptscript}{0.5}
   \zmath@script@opt{scale-absolute}{scale@absolute}{true}
-  \zmath@script@opt{font}{font}{\symup}
+  \zmath@script@opt{wrapper}{wrapper}{\symup}
+  \zmath@script@opt{adaptative}{adaptative}{true}
 
 \ExplSyntaxOn
 
@@ -889,6 +907,10 @@
 
   \box_new:N \l__zmath_script_nuc_box
   \box_new:N \l__zmath_script_out_box
+
+  % whether the current call is placed from the edges of the nucleus (true)
+  % or by TeX (false); set by \zscript from zscript-adaptative and its +
+  \bool_new:N \l__zmath_script_adaptative_bool
 
   % per-script storage for each key in {ll, ul, lr, ur}: its token list (empty
   % = absent), its star flag, its box, the x of its left edge from the
@@ -907,36 +929,41 @@
     { \use:c { zmath@script@ \l__zmath_script_mode_tl @ #1 } }
 
   % stores script #3 and its star flag #2 under key #1, wrapped in the macro
-  % zscript-font (none if empty), expanded now; blank = absent
+  % zscript-wrapper (none if empty), expanded now; blank = absent
   \cs_new_protected:Npn \__zmath_script_store:nnn #1#2#3
     {
       \tl_clear:c { l__zmath_script_ #1 _tl }
       \tl_if_blank:nF {#3}
         {
           \tl_set:cn   { l__zmath_script_ #1 _tl } { {#3} }
-          \tl_put_left:cV { l__zmath_script_ #1 _tl } \zmath@script@font
+          \tl_put_left:cV { l__zmath_script_ #1 _tl } \zmath@script@wrapper
           \bool_set:cn { l__zmath_script_ #1 _star_bool } {#2}
         }
     }
 
-  % typesets script #1 (if present) — unstarred in style #4, starred scaled
-  % by zscript-scale-<style of the nucleus> (see the header for what the
-  % factor multiplies) — and computes its position: #2 "top"|"bottom" (which
-  % nucleus edge it hangs from), #3 "leading"|"trailing" (which side); then
-  % widens the left/right overhangs to contain it
+  % the content of script #1 (to be used in math mode) for scripts of style
+  % #2 — starred: a box scaled by zscript-scale-<style of the nucleus> (see
+  % the header for what the factor multiplies); unstarred: the content itself
+  \cs_new_protected:Npn \__zmath_script_content:nN #1#2
+    {
+      \bool_if:cTF { l__zmath_script_ #1 _star_bool }
+        {
+          \__zmath_scale:nnnnN { } { \tl_use:c { l__zmath_script_ #1 _tl } }
+            { script@scale } { \l__zmath_script_ctx_tl } #2
+        }
+        { \tl_use:c { l__zmath_script_ #1 _tl } }
+    }
+
+  % typesets script #1 (if present) in style #4 and computes its position:
+  % #2 "top"|"bottom" (which nucleus edge it hangs from), #3
+  % "leading"|"trailing" (which side); then widens the left/right overhangs to
+  % contain it
   \cs_new_protected:Npn \__zmath_script_place:nnnN #1#2#3#4
     {
       \tl_if_empty:cF { l__zmath_script_ #1 _tl }
         {
           \hbox_set:cn { l__zmath_script_ #1 _box }
-            {
-              \bool_if:cTF { l__zmath_script_ #1 _star_bool }
-                {
-                  \__zmath_scale:nnnnN { } { \tl_use:c { l__zmath_script_ #1 _tl } }
-                    { script@scale } { \l__zmath_script_ctx_tl } #4
-                }
-                { $ \m@th #4 \tl_use:c { l__zmath_script_ #1 _tl } $ }
-            }
+            { $ \m@th #4 \__zmath_script_content:nN {#1} #4 $ }
           \dim_set:cn { l__zmath_script_ #1 _y_dim }
             {
               \str_if_eq:nnTF {#2} { top }
@@ -990,22 +1017,20 @@
         }
     }
 
-  % builds the whole output (one \mathchoice branch), reading the scripts
-  % already stored by \zscript — #1 nucleus  #2 "math"|"text"
-  % #3 style name of the nucleus (display|text|script|scriptscript)
-  % #4 style of the nucleus  #5 style of the scripts
-  \cs_new_protected:Npn \__zmath_script_build:nnnNN #1#2#3#4#5
+  % builds the whole output of the adaptive placement (one \mathchoice
+  % branch), reading the scripts already stored by \zscript — #1 nucleus
+  % #2 "math"|"text"  #3 style of the nucleus  #4 style of the scripts
+  \cs_new_protected:Npn \__zmath_script_adaptive:nnNN #1#2#3#4
     {
       \tl_set:Nn \l__zmath_script_mode_tl {#2}
-      \tl_set:Nn \l__zmath_script_ctx_tl {#3}
-      \__zmath_unit:N #4
-      \hbox_set:Nn \l__zmath_script_nuc_box { $ \m@th #4 #1 $ }
+      \__zmath_unit:N #3
+      \hbox_set:Nn \l__zmath_script_nuc_box { $ \m@th #3 #1 $ }
       \dim_zero:N \l__zmath_script_left_dim
       \dim_zero:N \l__zmath_script_right_dim
-      \__zmath_script_place:nnnN { ll } { bottom } { leading }  #5
-      \__zmath_script_place:nnnN { ul } { top }    { leading }  #5
-      \__zmath_script_place:nnnN { lr } { bottom } { trailing } #5
-      \__zmath_script_place:nnnN { ur } { top }    { trailing } #5
+      \__zmath_script_place:nnnN { ll } { bottom } { leading }  #4
+      \__zmath_script_place:nnnN { ul } { top }    { leading }  #4
+      \__zmath_script_place:nnnN { lr } { bottom } { trailing } #4
+      \__zmath_script_place:nnnN { ur } { top }    { trailing } #4
       \hbox_set:Nn \l__zmath_script_out_box
         {
           \kern \__zmath_ratio:nN { \__zmath_script_opt:n { before } } \l__zmath_unit_h_dim
@@ -1031,7 +1056,48 @@
       \box_use:N \l__zmath_script_out_box
     }
 
-  \NewDocumentCommand \zscript { s O{} s O{} m s O{} s O{} }
+  % attaches to the atom just before it the subscript (key #1) and the
+  % superscript (key #2), when present, with TeX's own placement — #3 style
+  % of the scripts
+  \cs_new_protected:Npn \__zmath_script_attach:nnN #1#2#3
+    {
+      \tl_if_empty:cF { l__zmath_script_ #1 _tl }
+        { \sb { \__zmath_script_content:nN {#1} #3 } }
+      \tl_if_empty:cF { l__zmath_script_ #2 _tl }
+        { \sp { \__zmath_script_content:nN {#2} #3 } }
+    }
+
+  % builds the whole output of the traditional placement (one \mathchoice
+  % branch), leaving every position to TeX — #1 nucleus  #2 style of the
+  % scripts. The leading scripts hang from an empty atom and the nucleus is
+  % an \mathord: TeX adds no space between the two, and a large operator
+  % takes its scripts at the sides instead of above and below.
+  \cs_new_protected:Npn \__zmath_script_tex:nN #1#2
+    {
+      { }
+      \__zmath_script_attach:nnN { ll } { ul } #2
+      \mathord {#1}
+      \__zmath_script_attach:nnN { lr } { ur } #2
+    }
+
+  % builds the whole output (one \mathchoice branch), reading the scripts
+  % already stored by \zscript, in the placement selected into
+  % \l__zmath_script_adaptative_bool by \zscript itself —
+  % #1 nucleus  #2 "math"|"text"
+  % #3 style name of the nucleus (display|text|script|scriptscript)
+  % #4 style of the nucleus  #5 style of the scripts
+  \cs_new_protected:Npn \__zmath_script_build:nnnNN #1#2#3#4#5
+    {
+      \tl_set:Nn \l__zmath_script_ctx_tl {#3}
+      \bool_if:NTF \l__zmath_script_adaptative_bool
+        { \__zmath_script_adaptive:nnNN {#1} {#2} #4 #5 }
+        { \__zmath_script_tex:nN {#1} #5 }
+    }
+
+  % parses the nine o/s/m arguments of \zscript, stores the scripts and
+  % builds the output, in the placement already selected by \zscript. The
+  % arguments live here, not in \zscript, so that the + fits beside them
+  \NewDocumentCommand \__zmath_script_main { s O{} s O{} m s O{} s O{} }
     {
       \__zmath_script_store:nnn { ll } {#1} {#2}
       \__zmath_script_store:nnn { ul } {#3} {#4}
@@ -1048,6 +1114,15 @@
                 { \__zmath_script_build:nnnNN {#5} { text } { scriptscript } \scriptscriptstyle \scriptscriptstyle }
             }
         }
+    }
+
+  % the placement is adaptive when zscript-adaptative is true XOR the call
+  % carries a +; set on every call, so nothing leaks between calls
+  \NewDocumentCommand \zscript { t+ }
+    {
+      \bool_set:Nn \l__zmath_script_adaptative_bool
+        { \bool_xor_p:nn { \str_if_eq_p:Vn \zmath@script@adaptative { true } } {#1} }
+      \__zmath_script_main
     }
 
 \ExplSyntaxOff

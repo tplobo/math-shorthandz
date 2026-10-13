@@ -81,7 +81,7 @@
   {\end{tcolorbox}}
 \makeatletter
   \newcommand{\macroRow}[1]{%
-    \addlinespace[0.5em]%
+    \addlinespace[0.3em]%
     \multicolumn{\macroTable@columns}{l}{\underline{#1}} \\
     \addlinespace[0.4em]%
   }
@@ -168,11 +168,11 @@
 \title{The \pkg{zmath} Package\\[4pt]
        \large Smart Math Typesetting Utilities}
 \author{Tiago Pomella Lobo}
-\date{\today\quad v1.0.0}
+\date{\today\quad v1.1.0}
 \maketitle
 
 \begin{abstract}
-  The \pkg{zmath} package provides a unified, high-level interface for advanced mathematical typesetting in \LaTeX. It extends \pkg{amsmath}-style constructs with semantic, scalable, and mode-independent commands optimised for engineering, physics, and applied mathematics. Key features include configurable integral notation with flexible limit placement, a multi-style fraction command, auto-scaling subscripts and superscripts, vector and matrix underline notation, and an ``evaluated at'' bar command. All commands work consistently in both display and inline math mode, and most are safe in text mode via \cs{ensuremath} wrappers.
+  The \pkg{zmath} package provides a unified, high-level interface for advanced mathematical typesetting in \LaTeX. It extends \pkg{amsmath}-style constructs with semantic, scalable, and mode-independent commands optimised for engineering, physics, and applied mathematics. Key features include configurable integral notation with flexible limit placement, a multi-style fraction command, auto-scaling subscripts and superscripts, vector and matrix underline notation, and an "evaluated at" bar command. All commands work consistently in both display and inline math mode, and most are safe in text mode via \cs{ensuremath} wrappers.
 \end{abstract}
 
 \tableofcontents
@@ -825,18 +825,22 @@ The \macroMeta{condition} subscript is scaled by \cs{zscale} only in the auto-si
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zscript}
-The \cs{zscript} engine attaches up to four independent scripts to a central \macroMeta{nucleus}. It simultaneously handles leading (pre-indexed) subscripts \macroMeta{ll} and superscripts \macroMeta{ul}, alongside conventional trailing subscripts \macroMeta{lr} and superscripts \macroMeta{ur}. Omitting any optional script completely suppresses its rendering footprint. It is compatible with text, inline and display modes. Its options are listed in Table~\ref{tb:zscript}.
+The \cs{zscript} engine attaches up to four independent scripts to a central \macroMeta{nucleus}. It simultaneously handles leading (pre-indexed) subscripts \macroMeta{ll} and superscripts \macroMeta{ul}, alongside conventional trailing subscripts \macroMeta{lr} and superscripts \macroMeta{ur}. Omitting any optional script completely suppresses its rendering footprint. The command is compatible with text, inline and display modes. Its options are listed in Table~\ref{tb:zscript}.
 
 \begin{syntax}
-  \cs{zscript}\macroStar\macroOpt{ll}\macroStar\macroOpt{ul}\macroArg{nucleus}\macroStar\macroOpt{lr}\macroStar\macroOpt{ur}
+  \cs{zscript}\macroPlus\macroStar\macroOpt{ll}\macroStar\macroOpt{ul}\macroArg{nucleus}\macroStar\macroOpt{lr}\macroStar\macroOpt{ur}
 \end{syntax}
 
-\begin{macroTable}[Option & Math & Text & Description]{tb:zscript}{Options for \cs{zscript}. The \macroMeta{mode} is \opt{math} (display style) or \opt{text} (text, script and scriptscript style).}
+\begin{macroTable}[Option & Math & Text & Description]{tb:zscript}{Options for \cs{zscript}. The \macroMeta{mode} is \opt{math} (display) or \opt{text} (text, script and scriptscript).}
 
-    \macroRow{Script Font}
-    \opt{zscript-font}
+    \macroRow{Pre-rendering}
+    \opt{zscript-adaptative}
+        & \macroSpan{\optval{script\@adaptative}}
+        & \opt{true}: scripts are offset from nucleus edges. \opt{false}: \TeX's classical placement (position and frame options are ignored). A leading \macroPlus\ modifier locally flips this.
+    \\
+    \opt{zscript-wrapper}
         & \macroSpan{\cs{symup}}
-        & Macro applied to every script, taking it as its one argument; \cs{symup}, \cs{text} or empty are recommended (see below).
+        & Single-argument macro applied to every script.
     \\
 
     \macroRow{Starred Scripts}
@@ -850,15 +854,15 @@ The \cs{zscript} engine attaches up to four independent scripts to a central \ma
     \\
     \opt{zscript-scale-text}
         & \macroSpan{\optval{script\@scale\@text}}
-        & As \opt{zscript-scale-display}, for a nucleus in text style.
+        & As \opt{zscript-scale-display}, for text style.
     \\
     \opt{zscript-scale-script}
         & \macroSpan{\optval{script\@scale\@script}}
-        & As \opt{zscript-scale-display}, for a nucleus in script style.
+        & As \opt{zscript-scale-display}, for script style.
     \\
     \opt{zscript-scale-scriptscript}
         & \macroSpan{\optval{script\@scale\@scriptscript}}
-        & As \opt{zscript-scale-display}, for a nucleus in scriptscript style.
+        & As \opt{zscript-scale-display}, for scriptscript style.
     \\
 
     \macroRow{Frame}
@@ -882,42 +886,42 @@ The \cs{zscript} engine attaches up to four independent scripts to a central \ma
     \macroRow{Trailing Scripts}
     \macroKey{zscript}{ur-v}
         & \optval{script\@math\@ur\@v} & \optval{script\@text\@ur\@v}
-        & Nucleus \emph{top} edge to the \emph{bottom} edge of the upper-right script.
+        & Nucleus \emph{top} edge to upper-right script \emph{bottom} edge.
     \\
     \macroKey{zscript}{ur-h}
         & \optval{script\@math\@ur\@h} & \optval{script\@text\@ur\@h}
-        & Nucleus \emph{right} edge to the \emph{left} edge of the upper-right script.
+        & Nucleus \emph{right} edge to upper-right script \emph{left} edge.
     \\
     \macroKey{zscript}{lr-v}
         & \optval{script\@math\@lr\@v} & \optval{script\@text\@lr\@v}
-        & Nucleus \emph{bottom} edge to the \emph{top} edge of the lower-right script.
+        & Nucleus \emph{bottom} edge to lower-right script \emph{top} edge.
     \\
     \macroKey{zscript}{lr-h}
         & \optval{script\@math\@lr\@h} & \optval{script\@text\@lr\@h}
-        & Nucleus \emph{right} edge to the \emph{left} edge of the lower-right script.
+        & Nucleus \emph{right} edge to lower-right script \emph{left} edge.
     \\
 
     \macroRow{Leading Scripts}
     \macroKey{zscript}{ul-v}
         & \optval{script\@math\@ul\@v} & \optval{script\@text\@ul\@v}
-        & Nucleus \emph{top} edge to the \emph{bottom} edge of the upper-left script.
+        & Nucleus \emph{top} edge to upper-left script \emph{bottom} edge.
     \\
     \macroKey{zscript}{ul-h}
         & \optval{script\@math\@ul\@h} & \optval{script\@text\@ul\@h}
-        & Nucleus \emph{left} edge to the \emph{right} edge of the upper-left script.
+        & Nucleus \emph{left} edge to upper-left script \emph{right} edge.
     \\
     \macroKey{zscript}{ll-v}
         & \optval{script\@math\@ll\@v} & \optval{script\@text\@ll\@v}
-        & Nucleus \emph{bottom} edge to the \emph{top} edge of the lower-left script.
+        & Nucleus \emph{bottom} edge to lower-left script \emph{top} edge.
     \\
     \macroKey{zscript}{ll-h}
         & \optval{script\@math\@ll\@h} & \optval{script\@text\@ll\@h}
-        & Nucleus \emph{left} edge to the \emph{right} edge of the lower-left script.
+        & Nucleus \emph{left} edge to lower-left script \emph{right} edge.
     \\
 
 \end{macroTable}
 
-To maintain typographic flexibility, placing a \macroStar\ modifier immediately before any script argument scales that script by the \opt{zscript-scale-}\macroMeta{style} option, where \macroMeta{style} is the math style of the nucleus (see \opt{zscale}). By default the factor multiplies the normal size, so it is the final size of the script; a starred script nested inside other scaled content is never shrunk below the size given by \opt{zscript-scale-scriptscript}.
+Script placement is determined by the \opt{zscript-adaptative} option, to either use the standard \TeX\ engine or a dedicate internal engine with high customizability. The employment of a \macroPlus\ modifier directly following \cs{zscript} flips this placement choice. For both engines, applying a \macroStar\ modifier immediately before any script argument scales that script by the \opt{zscript-scale-}\macroMeta{style} option, where \macroMeta{style} is the math style of the nucleus (using \opt{zscale}, so nesting cannot bring a size below \opt{zscript-scale-scriptscript}). When using the dedicate engine, scripts are explicitly positioned boxes rather than using \TeX's script machinery, so they may freely overlap the nucleus (Figure \ref{fig:zscript}). All positions use one Cartesian system ($x$ positive right, $y$ positive up) and are measured from a \emph{nucleus edge} to the \emph{nearest script edge} as dimensionless ratios: vertical options (\opt{v}, \opt{above}, \opt{below}) are relative to the x-height, and horizontal ones (\opt{h}, \opt{before}, \opt{after}) to the quad, both in the nucleus's math style. So, the same settings work for nuclei and scripts of any size, and rescaling a script moves its outer edge away from the nucleus without changing its anchor. The output is a single box whose height and depth encompass the nucleus and all scripts, preventing collisions with adjacent lines and exposing its true dimensions to subsequent commands (\eg{} further scripts or \cs{left}/\cs{right}, as shown below). The \opt{before}, \opt{after}, \opt{above} and \opt{below} options add (or remove, when negative) clearance around it.
 
 \begin{figure}[htbp]
   \centering
@@ -966,8 +970,6 @@ To maintain typographic flexibility, placing a \macroStar\ modifier immediately 
   \label{fig:zscript}
 \end{figure}
 
-Scripts are explicitly positioned boxes rather than using \TeX's script machinery, so they may freely overlap the nucleus. All positions use one Cartesian system ($x$ positive right, $y$ positive up) and are measured from a \emph{nucleus edge} to the \emph{nearest script edge} as dimensionless ratios: vertical options (\opt{v}, \opt{above}, \opt{below}) are relative to the x-height, and horizontal ones (\opt{h}, \opt{before}, \opt{after}) to the quad, both in the nucleus's math style, so the same settings work for nuclei and scripts of any size, including exponents. Rescaling a script therefore moves its outer edge away from the nucleus without changing its anchor. The result is a single box whose height and depth encompass the nucleus and all scripts, preventing collisions with adjacent lines and exposing its true dimensions to subsequent commands (\eg{} further scripts or \cs{left}/\cs{right}, as shown below); the \opt{before}, \opt{after}, \opt{above} and \opt{below} options add (or remove, when negative) clearance around it.
-
 The following examples show scripts in text and math modes, with and without scaling, inside an exponent, and demonstrate its spacing:
 \begin{tcblisting}{
     zmathex,
@@ -991,14 +993,14 @@ The following examples show scripts in text and math modes, with and without sca
   Subsequent line, no overlap.
 \end{tcblisting}
 
-Every script is wrapped in \opt{zscript-font}, which may be any macro taking one argument (\eg{} \cs{textit}). The nucleus is never wrapped. Three settings for the option are recommended; they differ in usage procedure for each type of script (variables, math symbols, labels, un/signed numbers):
+Every script is wrapped in \opt{zscript-wrapper}, which may be any macro taking one argument (\eg{} \cs{textit}). The nucleus is never wrapped. Three settings for the option are recommended; they differ in usage procedure for each type of script (variables, math symbols, labels, un/signed numbers):
 \begin{itemize}[nosep]
-  \item \cs{symup} (default, compact) — math symbols, digits and signs are allowed and do not require \texttt{\$}\ldots\texttt{\$} wrapping, since the script is already in math mode. Variables must be written as \cs{symit}\macroArg{variable} to not show as text. Some labels must be written \cs{text}\macroArg{label} (since \eg spaces are ignored, hyphens become minus signs, \etc). This is the default because descriptive labels tend to be the most common type of script.
+  \item \cs{symup} (default, compact) — math symbols, digits and signs are allowed and do not require \texttt{\$}\ldots\texttt{\$} wrapping, since the script is already in math mode. Variables must be written as \cs{symit}\macroArg{variable} to not show as text. Some labels must be written as \cs{text}\macroArg{label} (since without it \eg spaces are ignored, hyphens become minus signs, \etc). This is the default because descriptive labels tend to be the most common type of script.
   \item \cs{text} (standard) — all labels are allowed (with spaces, hyphens, \etc). Variables, math symbols and signs must be wrapped by \texttt{\$}\ldots\texttt{\$}, exactly as inside \cs{text}. This may become cumbersome when scripts tend to show math symbols and signs (\eg exponents).
   \item empty (plain) — scripts are set in the ambient math alphabet, as plain \TeX\ does, for full control. All labels must be written \cs{text}\macroArg{label}.
 \end{itemize}
 
-The following examples demonstrate the outputs for each recommendation, and comment on what is displayed incorrectly in each application:
+The following examples demonstrate the outputs for each recommendation, and comment on what is unwanted in each application:
 \begin{tcblisting}{
     zmathex,
     halign lower=center,
@@ -1011,18 +1013,44 @@ The following examples demonstrate the outputs for each recommendation, and comm
   \]
   \nl[3]
   \[
-    \setkeys{zmath}{zscript-font=\text}
+    \setkeys{zmath}{zscript-wrapper=\text}
     \zscript[$\mu$][$p$]{R}[pre-ion][$-1$]
     \ne
     \zscript[\mu][p]{R}[pre-ion][-1]        % greek, variable, minus
   \]
   \nl[3]
   \[
-    \setkeys{zmath}{zscript-font=}
+    \setkeys{zmath}{zscript-wrapper=}
     \zscript[\mu][p]{R}[\text{pre-ion}][-1]
     \ne
     \zscript[\mu][p]{R}[pre-ion][-1]        % label
   \]
+\end{tcblisting}
+
+It should also be emphasized that the placement of scripts with the dedicated engine adapts to the size of the nucleus. For example, a script follows the nucleus's height (since positions are measured from its edges), whereas the \TeX\ engine applies a font-dependent shift from the baseline (which is enforced even for symbols like \cs{int} and \cs{sum}). The following examples compare placements for nuclei of different shapes with both engines:
+\begin{tcblisting}{
+    zmathex,
+    halign lower=center,
+    lefthand width=0.72\linewidth
+  }
+  \begin{gather*}
+    \zscript{k}[T] \ne k_{\text{T}} = \zscript+{k}[T]
+    \nl[0.5]
+    \zscript{g}[T] \ne g_{\text{T}} = \zscript+{g}[T]
+    \nl[0.5]
+    \zscript{\sum}[T] \ne \sum_{\text{T}} \ne \zscript+{\sum}[T]
+  \end{gather*}
+  \nl[2]
+  {
+    \setkeys{zmath}{zscript-adaptative=false}
+    \begin{gather*}
+      \zscript{k}[T] = k_{\text{T}} \ne \zscript+{k}[T]
+      \nl[0.5]
+      \zscript{g}[T] = g_{\text{T}} \ne \zscript+{g}[T]
+      \nl[0.5]
+      \zscript{\sum}[T] \ne \sum_{\text{T}} \ne \zscript+{\sum}[T]
+  \end{gather*}
+  }
 \end{tcblisting}
 
 % ------------------------------------------------------------------------------
@@ -1977,6 +2005,15 @@ With two stars before \macroMeta{type}, the \opt{right} class is applied for a m
 % ==============================================================================
 
 \begin{description}[style=nextline, leftmargin=2cm, labelwidth=!]
+
+  \item[v1.1.0 (2026/10/12)] Per-call control of the placement of scripts. Option rename.
+    \begin{itemize}[nosep]
+
+      \item \cs{zscript}: the switch \opt{zscript-adaptative} (which was missing from v1.0.0) selects between the placement from the edges of the nucleus and \TeX's own placement, and a leading \macroPlus\ flips it for a single call, whatever its value.
+
+      \item \cs{zscript}: the option \opt{zscript-font} was renamed \opt{zscript-wrapper}, since it selects a macro applied to every script rather than a font. Replace \opt{font} by \opt{wrapper} in the key; its meaning and values are unchanged, and no alias is kept.
+
+    \end{itemize}
 
   \item[v1.0.0 (2026/10/09)] Initial public release. Every command was rewritten on a common footing and shared naming convenction (\cs{z...}). New commands added.
     \begin{itemize}[nosep]
