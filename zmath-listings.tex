@@ -29,12 +29,16 @@
   % overriding keywordstyle [1] recolours all of them purple, and any
   % command not listed in a higher class also falls through to purple.
   keywordstyle={[1]\color{eva@purple}},
-  morekeywords={[1]overleftrightarrow},
+  morekeywords={[1]overleftrightarrow,text,
+    mathcal,mathbb,implies,
+    setkeys,                                  % xkeyval
+    uline,uuline,                             % ulem
+    },
   %
   % --- class 2: environment names used inside \begin{} and \end{} (yellow) ---
   keywordstyle={[2]\color{eva@yellow}},
   morekeywords={[2]document,
-    equation,eq,gather,align,alignat,multline,split,
+    equation,eq,gather,align,flalign,alignat,multline,split,
     cases,array,matrix,pmatrix,bmatrix,vmatrix,
     itemize,enumerate,description,
     figure,table,minipage,
@@ -44,7 +48,7 @@
   % --- class 3: zmath package commands (blue) ---
   keywordstyle={[3]\color{eva@blue}},
   morekeywords={[3]zscale,zscript,zint,zfrac,zarg,zline,zlim,
-                   zdiff,zpunct,zprime,zvec,zmat,zcond},
+                   zdiff,zpunct,zprime,zvec,zmat,zcond,zdot},
   %
   % --- class 4: math commands (cyan) ---
   keywordstyle={[4]\color{eva@cyan}},

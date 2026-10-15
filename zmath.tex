@@ -225,7 +225,7 @@ The local macro \cs{nl} is used to add line breaks in the example boxes, so it h
 \subsection{License and support}
 % ------------------------------------------------------------------------------
 
-Copyright \textcopyright{} 2020--2026 Tiago Pomella Lobo. This work may be distributed and/or modified under the conditions of the \LaTeX\ Project Public License, version 1.3c or later (\url{https://www.latex-project.org/lppl.txt}), and has the maintenance status ``author-maintained''. Source code, issues and releases: \url{https://github.com/tplobo/zmath}.
+Copyright \textcopyright{} 2020--2026 Tiago Pomella Lobo. This work may be distributed and/or modified under the conditions of the \LaTeX\ Project Public License, version 1.3c or later (\url{https://www.latex-project.org/lppl.txt}), and has the maintenance status "author-maintained". Source code, issues and releases: \url{https://github.com/tplobo/zmath}.
 
 % ==============================================================================
 \section{User Interface}
@@ -710,7 +710,7 @@ The \cs{zdiff} utility typesets either a differential or a derivative operator w
 
     \opt{zdiff-math-separation}
         & \optval{diff\@math\@separation}
-        & Extra kern inserted before ``d'' in differential form when \cs{zdiff} is called with a leading \macroPlus\ in display math style. It is \emph{added} to the thin space that \TeX\ already puts there.
+        & Extra kern inserted before "d" in differential form when \cs{zdiff} is called with a leading \macroPlus\ in display math style. It is \emph{added} to the thin space that \TeX\ already puts there.
     \\
 
     \opt{zdiff-text-separation}
@@ -761,7 +761,7 @@ Leaving the bare form free of extra kerns also keeps it usable as an operand. Th
   \]
 \end{tcblisting}
 
-A leading \macroPlus, meaningful only in differential form, \emph{adds} a kern before the ``d'' on top of the spacing \TeX\ already provides (\opt{zdiff-math-separation} in display style, \opt{zdiff-text-separation} in text/script/scriptscript style; chosen automatically to match the ambient math style, similarly to \cs{zint}'s math/text split). Use it whenever the differential needs more visual separation from the preceding term than the normal thin space. Because the base spacing is computed by \TeX, the plain form never doubles the space after \cs{zdot}. The following example compares the default spacing after a dot product against an increased spacing for clarity:
+A leading \macroPlus, meaningful only in differential form, adds a kern before the "d" on top of the spacing \TeX\ already provides (\opt{zdiff-math-separation} in display style, \opt{zdiff-text-separation} in text/script/scriptscript style; chosen automatically to match the ambient math style, similarly to \cs{zint}'s math/text split). Intended to be used when clear visual separation is needed. The following example compares the default and increased spacing in potentially desireable cases:
 \begin{tcblisting}{
     zmathex,
     lefthand width=0.6\linewidth,
