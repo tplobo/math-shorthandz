@@ -4,7 +4,7 @@
 \definecolor{eva@bg}      {HTML}{1e2024}
 \definecolor{eva@fg}      {HTML}{cdd3de}
 \definecolor{eva@red}     {HTML}{e06c75}   % line breaks \\
-\definecolor{eva@blue}    {HTML}{61afef}   % zmath package commands
+\definecolor{eva@blue}    {HTML}{61afef}   % math-shorthandz package commands
 \definecolor{eva@green}   {HTML}{98c379}   % delimiters: {} [] $ \[ \]
 \definecolor{eva@yellow}  {HTML}{e5c07b}   % environment names
 \definecolor{eva@cyan}    {HTML}{56b6c2}   % math commands
@@ -12,7 +12,7 @@
 \definecolor{eva@comment} {HTML}{676e95}   % comments
 
 % ---- listings style ----
-\lstdefinestyle{zmathex}{
+\lstdefinestyle{math-shorthandz-tex}{
   language=[LaTeX]TeX,
   basicstyle=\small\ttfamily\color{eva@fg},
   backgroundcolor=\color{eva@bg},
@@ -28,8 +28,8 @@
   % The built-in [LaTeX]TeX keyword list populates class 1 automatically;
   % overriding keywordstyle [1] recolours all of them purple, and any
   % command not listed in a higher class also falls through to purple.
-  keywordstyle={[1]\color{eva@purple}},
-  morekeywords={[1]overleftrightarrow,text,
+  texcsstyle={[1]\color{eva@purple}},
+  moretexcs={[1]overleftrightarrow,text,
     mathcal,mathbb,implies,
     setkeys,                                  % xkeyval
     uline,uuline,                             % ulem
@@ -45,18 +45,18 @@
     center,flushleft,flushright,
     verbatim,lstlisting,tcblisting},
   %
-  % --- class 3: zmath package commands (blue) ---
-  keywordstyle={[3]\color{eva@blue}},
-  morekeywords={[3]zscale,zscript,zint,zfrac,zarg,zline,zlim,
-                   zdiff,zpunct,zprime,zvec,zmat,zcond,zdot},
+  % --- class 3: math-shorthandz package commands (blue) ---
+  texcsstyle={[3]\color{eva@blue}},
+  moretexcs={[3]zscale,zscript,zint,zfrac,zarg,zline,zlim,
+                zdiff,zpunct,zprime,zvec,zmat,zcond,zdot},
   %
   % --- class 4: math commands (cyan) ---
-  keywordstyle={[4]\color{eva@cyan}},
-  morekeywords={[4]},
+  texcsstyle={[4]\color{eva@cyan}},
+  moretexcs={[4]},
   %
   % --- class 5: local commands (grey) ---
-  keywordstyle={[5]\color{eva@comment}},
-  morekeywords={[5]nl},
+  texcsstyle={[5]\color{eva@comment}},
+  moretexcs={[5]nl},
   %
   % --- comments ---
   commentstyle=\color{eva@comment},
@@ -76,14 +76,14 @@
 }
 
 \tcbset{
-  zmathex/.style={
+  math-shorthandz-tex/.style={
     skin=bicolor,
     sidebyside,
     sidebyside align=top seam,
     sidebyside gap=8mm,
     lefthand width=0.52\linewidth,
     listing engine=listings,
-    listing options={style=zmathex},
+    listing options={style=math-shorthandz-tex},
     colback=eva@bg,
     fontupper=\small\ttfamily\color{eva@fg},
     colbacklower=white,
