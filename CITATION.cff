@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "math-shorthandz: smart shorthands for typesetting math in LaTeX"
+authors:
+  - family-names: "Pomella Lobo"
+    given-names: "Tiago"
+doi: 10.5281/zenodo.23414428
+repository-code: "https://github.com/tplobo/math-shorthandz"
+url: "https://ctan.org/pkg/math-shorthandz"
+license: LPPL-1.3c
+keywords:
+  - LaTeX
+  - mathematics
+  - typesetting
