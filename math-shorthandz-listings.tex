@@ -5,11 +5,39 @@
 \definecolor{eva@fg}      {HTML}{cdd3de}
 \definecolor{eva@red}     {HTML}{e06c75}   % line breaks \\
 \definecolor{eva@blue}    {HTML}{61afef}   % math-shorthandz package commands
+\definecolor{eva@orange}  {HTML}{d19a66}   % package options (keys)
 \definecolor{eva@green}   {HTML}{98c379}   % delimiters: {} [] $ \[ \]
 \definecolor{eva@yellow}  {HTML}{e5c07b}   % environment names
 \definecolor{eva@cyan}    {HTML}{56b6c2}   % math commands
 \definecolor{eva@purple}  {HTML}{cf68e1}   % default: all other \commands
 \definecolor{eva@comment} {HTML}{676e95}   % comments
+
+% Option names, collected from \msz@opt: full (zscript-math-ur-v) and
+% unprefixed (math-ur-v, as written in \zalias). Plain words that clash with
+% ordinary text are left out of the unprefixed list.
+\makeatletter
+  \ExplSyntaxOn
+    \clist_set:Nx \l_tmpa_clist { \msz@keysfull \msz@keys reset }
+    \clist_remove_duplicates:N \l_tmpa_clist
+    \clist_remove_all:Nn \l_tmpa_clist { text }
+    \clist_remove_all:Nn \l_tmpa_clist { script }
+    \clist_remove_all:Nn \l_tmpa_clist { display }
+    \clist_remove_all:Nn \l_tmpa_clist { scriptscript }
+    \edef \evakeys { \clist_use:Nn \l_tmpa_clist { , } }
+  \ExplSyntaxOff
+\makeatother
+
+\edef\evatmp{%
+  \noexpand\lstdefinestyle{math-shorthandz-keys}{%
+    alsoletter={-},
+    keywordstyle={[6]\noexpand\color{eva@orange}},
+    morekeywords={[6]\evakeys}}}
+\evatmp
+
+% Colour of the brackets [ ]: green, except inside a grey \nl[...] call, where
+% the delimiter style below switches it to grey (locally, inside its group)
+\newcommand{\evabrcolor}{eva@green}
+\newcommand{\evabr}[1]{\begingroup\expandafter\color\expandafter{\evabrcolor}#1\endgroup}
 
 % ---- listings style ----
 \lstdefinestyle{math-shorthandz-tex}{
@@ -43,12 +71,17 @@
     itemize,enumerate,description,
     figure,table,minipage,
     center,flushleft,flushright,
-    verbatim,lstlisting,tcblisting},
+    verbatim,lstlisting,tcblisting,
+    },
   %
   % --- class 3: math-shorthandz package commands (blue) ---
   texcsstyle={[3]\color{eva@blue}},
   moretexcs={[3]zscale,zscript,zint,zfrac,zarg,zline,zlim,
-                zdiff,zpunct,zprime,zvec,zmat,zcond,zdot},
+              zdiff,zpunct,zprime,zvec,zmat,zcond,zdot,
+              zalias,zreset,
+              zscriptA,zscriptLow,zscriptHigh,zscriptRaw,
+              zscriptUndo,zscriptKeep,
+            },
   %
   % --- class 4: math commands (cyan) ---
   texcsstyle={[4]\color{eva@cyan}},
@@ -61,6 +94,9 @@
   % --- comments ---
   commentstyle=\color{eva@comment},
   %
+  % --- local \nl[x] calls: grey from \nl[ to ], brackets included ---
+  moredelim=[s][\color{eva@comment}\def\evabrcolor{eva@comment}]{\\nl[}{]},
+  %
   % --- literate: delimiters green, \\ red ---
   % The * prefix means replacements apply even inside keyword tokens.
   % mathescape=false is required for the $ entry to work without
@@ -69,8 +105,8 @@
   literate=
     *{\{}{{\textcolor{eva@green}{\{}}}1
      {\}}{{\textcolor{eva@green}{\}}}}1
-     {[}{{\textcolor{eva@green}{[}}}1
-     {]}{{\textcolor{eva@green}{]}}}1
+     {[}{{\evabr{[}}}1
+     {]}{{\evabr{]}}}1
      {\$}{{\textcolor{eva@green}{\$}}}1
      {\\\\}{{\textcolor{eva@red}{\textbackslash\textbackslash}}}2,
 }
@@ -83,7 +119,7 @@
     sidebyside gap=8mm,
     lefthand width=0.52\linewidth,
     listing engine=listings,
-    listing options={style=math-shorthandz-tex},
+    listing options={style=math-shorthandz-tex, style=math-shorthandz-keys},
     colback=eva@bg,
     fontupper=\small\ttfamily\color{eva@fg},
     colbacklower=white,

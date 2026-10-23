@@ -3,7 +3,7 @@
 % ##############################################################################
 % math-shorthandz.tex — manual of the math-shorthandz package
 %
-% Copyright (C) 2020-2026 Tiago Pomella Lobo
+% Copyright (C) 2025-2026 Tiago Pomella Lobo
 % LPPL 1.3c or later, author-maintained; see math-shorthandz.sty for the full notice.
 %
 % Compiling (LuaLaTeX or XeLaTeX, required by unicode-math; no -shell-escape):
@@ -170,7 +170,7 @@
 \title{The \pkg{math-shorthandz} Package\\[4pt]
        \large Smart Shorthands for Math Typesetting}
 \author{Tiago Pomella Lobo}
-\date{\today\quad v1.0.0}
+\date{\today\quad v1.1.0}
 \maketitle
 
 \begin{abstract}
@@ -182,6 +182,7 @@
 
 % ==============================================================================
 \section{Introduction}
+\label{sc:intro}
 % ==============================================================================
 
 Classical \LaTeX\ math commands such as \cs{int}, \cs{frac}, and \cs{underbrace} are powerful but low-level. Writing readable source for an equation requires manual spacing kerns, sizing primitives, and mode switches that clutter the source and make it hard to refactor. As an alternative, I have been using several macros intermittently since 2020 to hide much of this complexity. Now, I have merged and expanded these macros into the \pkg{math-shorthandz} package that introduces many semantic shorthands. In this new version, the consolidated commands handle both display and inline modes, respect the ambient math style, and expose their tunable parameters as package options so the same source adapts to different fonts and house styles without changes to individual call sites. You can see some examples below:
@@ -212,22 +213,26 @@ The package name has a playful "z" ending to emphasize the unified naming style 
 
 % ------------------------------------------------------------------------------
 \subsection{About this documentation}
+\label{ss:about}
 % ------------------------------------------------------------------------------
 
 The local macro \cs{nl} is used to add line breaks in the example boxes, so it has been colored grey to reduce visual impact. Every option's key name is prefixed with the full public command name it belongs to (\eg{} \opt{zint-}, \opt{zdiff-}), so key names are unambiguous even when taken out of context. The environment \texttt{macroTable} typesets the captioned option table that follows the syntax of each command, with standard columns "Option", "Default" and "Description". Other headers can be optionally passed, and the starred form \texttt{macroTable*} prduces example tables with the columns "Source", "Output" and "Meaning". 
 
 % ------------------------------------------------------------------------------
 \subsection{License and support}
+\label{ss:license}
 % ------------------------------------------------------------------------------
 
 Copyright \textcopyright{} 2020--2026 Tiago Pomella Lobo. This work may be distributed and/or modified under the conditions of the \LaTeX\ Project Public License, version 1.3c or later (\url{https://www.latex-project.org/lppl.txt}), and has the maintenance status "author-maintained". Source code, issues and releases: \url{https://github.com/tplobo/math-shorthandz}.
 
 % ==============================================================================
 \section{User Interface}
+\label{sc:interface}
 % ==============================================================================
 
 % ------------------------------------------------------------------------------
 \subsection{Package options}
+\label{ss:options}
 % ------------------------------------------------------------------------------
 
 All tunable constants are exposed as key--value options via a unified interface. All keys belong to the family \texttt{shorthand}, so that is the first argument of \cs{setkeys} (not the package name). Every option is a plain macro read at call time, so it may be given to \cs{usepackage}, changed at any point with \cs{setkeys}\texttt{\{shorthand\}\{key=value\}}, or overridden for a single call by doing so inside a \TeX\ group. The table that follows the syntax of each command lists its options, default values and their effect(s); captions explain eventual placeholders.
@@ -235,6 +240,7 @@ All tunable constants are exposed as key--value options via a unified interface.
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zpunct} — punctuation at the end of a display line}
+\label{ss:zpunct}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zpunct}
@@ -280,6 +286,7 @@ while this example shows how to complement text within an unnumbered block, wher
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zline} — arbitrary underline stacking}
+\label{ss:zline}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zline}
@@ -364,6 +371,7 @@ The following example compares \cs{zvec} and \cs{zmat} with the \textsf{ulem} an
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zfrac} — flexible fraction}
+\label{ss:zfrac}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zfrac}
@@ -444,10 +452,11 @@ and here are some accompanying examples:
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zscale} — uniform content scaling}
+\label{ss:zscale}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zscale}
-The \cs{zscale} utility scales an arbitrary \macroMeta{math} token vector uniformly by a given \macroMeta{factor}. If the optional modifier is omitted, the engine defaults to the package option of the math style in which \cs{zscale} is called (\opt{scale-display}, \opt{scale-text}, \opt{scale-script} or \opt{scale-scriptscript}); an explicit \macroMeta{factor} overrides the factor in whichever style the call sits. With \opt{scale-absolute} set to \opt{true} (the default), the content is set to text size and the factor is subsequently applied. With \opt{false}, the content is set in the math style of the surrounding context \textit{before} being scaled, so scaling compounds with \TeX's own shrinking factor. Its options are listed in Table~\ref{tb:zscale}.
+The \cs{zscale} utility scales an arbitrary \macroMeta{math} token vector uniformly by a given \macroMeta{factor}. If the optional modifier is omitted, the engine defaults to the package option of the math style in which \cs{zscale} is called (\opt{zscale-display}, \opt{zscale-text}, \opt{zscale-script} or \opt{zscale-scriptscript}); an explicit \macroMeta{factor} overrides the factor in whichever style the call sits. With \opt{zscale-absolute} set to \opt{true} (the default), the content is set to text size and the factor is subsequently applied. With \opt{false}, the content is set in the math style of the surrounding context \textit{before} being scaled, so scaling compounds with \TeX's own shrinking factor. Its options are listed in Table~\ref{tb:zscale}.
 
 \begin{syntax}
   \cs{zscale}\macroOpt{factor}\macroArg{math}
@@ -455,31 +464,31 @@ The \cs{zscale} utility scales an arbitrary \macroMeta{math} token vector unifor
 
 \begin{macroTable}{tb:zscale}{Options for \cs{zscale}.}
 
-    \opt{scale-absolute}
+    \opt{zscale-absolute}
         & \optval{scale\@absolute}
         & \opt{true}: the factors multiply the content set in the \textit{normal} size (display style in display context, text style otherwise).
         \opt{false}: the factors multiply the content set in the ambient style, as \TeX\ would, so both factors stack (all factors $1$ gives plain \LaTeX scaling).
-        In both cases, \opt{scale-scriptscript} is set as the lower bound and nested calls do not scale below that (unless set explicitly).
+        In both cases, \opt{zscale-scriptscript} is set as the lower bound and nested calls do not scale below that (unless set explicitly).
     \\
 
-    \opt{scale-display}
+    \opt{zscale-display}
         & \optval{scale\@display}
         & Scale factor applied by \cs{zscale} in display style.
     \\
 
-    \opt{scale-text}
+    \opt{zscale-text}
         & \optval{scale\@text}
-        & As \opt{scale-display}, in text style.
+        & As \opt{zscale-display}, in text style.
     \\
 
-    \opt{scale-script}
+    \opt{zscale-script}
         & \optval{scale\@script}
-        & As \opt{scale-display}, in script style.
+        & As \opt{zscale-display}, in script style.
     \\
 
-    \opt{scale-scriptscript}
+    \opt{zscale-scriptscript}
         & \optval{scale\@scriptscript}
-        & As \opt{scale-display}, in scriptscript style.
+        & As \opt{zscale-display}, in scriptscript style.
     \\
 
 \end{macroTable}
@@ -497,7 +506,7 @@ The macro is inherently safe for direct deployment across both math configuratio
   $e^{A_{XYZ}} \ne e^{A_{\zscale{XYZ}}}$    % context-aware scaling
 \end{tcblisting}
 
-Since a scaled box is invisible to \TeX's math styles, an explicit guard is set for nested calls (\eg \cs{zscale\{\cs{zscale\{\macroArg{math}\}}\}}) to avoid illegible symbols. The size of scriptscript style, \ie{} \opt{scale-scriptscript}, is a lower bound for scaling. However, a factor that is already smaller than that (passed as an argument or set as an option) is still accepted:
+Since a scaled box is invisible to \TeX's math styles, an explicit guard is set for nested calls (\eg \cs{zscale\{\cs{zscale\{\macroArg{math}\}}\}}) to avoid illegible symbols. The size of scriptscript style, \ie{} \opt{zscale-scriptscript}, is a lower bound for scaling. However, a factor that is already smaller than that (passed as an argument or set as an option) is still accepted:
 \begin{tcblisting}{
     math-shorthandz-tex,
     halign lower=center,
@@ -513,12 +522,12 @@ Since a scaled box is invisible to \TeX's math styles, an explicit guard is set 
   $ X^{X^X} \to X^{X^{\zscale{X}}} $                    % scriptscript
 \end{tcblisting}
 
-Other commands that scale content using \cs{zscale} have four scale options, one per math style, and a switch analogous to \opt{scale-absolute}, so scaling choices remain independent. The reference is the style of the call for \cs{zscale}, as well as \cs{zdot}, \cs{zarg} and \cs{zprime}. But the reference is the script style of the nucleus, one level below it and never below scriptscript, for \cs{zscript}, \cs{zlim} and \cs{zint}.
+Other commands that scale content using \cs{zscale} have four scale options, one per math style, and a switch analogous to \opt{zscale-absolute}, so scaling choices remain independent; their keys are written \opt{<command>-scale-<style>} and \opt{<command>-scale-absolute}. The reference is the style of the call for \cs{zscale}, as well as \cs{zdot}, \cs{zarg} and \cs{zprime}. But the reference is the script style of the nucleus, one level below it and never below scriptscript, for \cs{zcond}, \cs{zscript}, \cs{zlim} and \cs{zint}.
 
 \textbf{Choosing scaling factors.} Factors can be chosen by deciding how large the output should be compared to standard \TeX\ behavior. If that reference size relative to the normal size is $r$, and the wanted fraction is $k$, then:
 \begin{itemize}[nosep]
-  \item when \opt{scale-absolute} is set to \opt{true}, the factor multiplies the normal size, so the output is scaled to $k \times r$;
-  \item when \opt{scale-absolute} is set to \opt{false}, the content is already set at the reference size, so the output is scaled to $k$.
+  \item when \opt{zscale-absolute} is set to \opt{true}, the factor multiplies the normal size, so the output is scaled to $k \times r$;
+  \item when \opt{zscale-absolute} is set to \opt{false}, the content is already set at the reference size, so the output is scaled to $k$.
 \end{itemize}
 Most math fonts shrink script and scriptscript style to about $70\%$ and $50\%$ of the normal size, \ie{} $r \approx 0.7$ and $r \approx 0.5$. So, the factor for a script-size symbol must be $k \times r$ in absolute mode, or $k$ in relative mode; \eg{} $0.9 \times 0.7 = 0.63$ in absolute mode (or $0.9$ in relative mode) makes it $90\%$ of the standard script-size symbol. The following examples show relative scaling set with \cs{setkeys}. They compare unscaled output against the default scaling (absolute), against a relative scaling with unchanged factors, and against a relative scaling with all factors changed to $0.8$:
 \begin{tcblisting}{
@@ -531,17 +540,17 @@ Most math fonts shrink script and scriptscript style to about $70\%$ and $50\%$ 
   $\zscale{X} \; X^{\zscale{X}} \; X^{X^{\zscale{X}}}$    % zscale
   \nl[3]
   {
-    \setkeys{shorthand}{scale-absolute=false}
+    \setkeys{shorthand}{zscale-absolute=false}
     $\zscale{X} \; X^{\zscale{X}} \; X^{X^{\zscale{X}}}$  % relative
   }
   \nl[10]
   {
     \setkeys{shorthand}{
-      scale-absolute=false,
-      scale-display=0.8,
-      scale-text=0.8,
-      scale-script=0.8,
-      scale-scriptscript=0.8
+      zscale-absolute=false,
+      zscale-display=0.8,
+      zscale-text=0.8,
+      zscale-script=0.8,
+      zscale-scriptscript=0.8
     }
     $\zscale{X} \; X^{\zscale{X}} \; X^{X^{\zscale{X}}}$  % relative, k = 0.8
   }
@@ -550,6 +559,7 @@ Most math fonts shrink script and scriptscript style to about $70\%$ and $50\%$ 
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zdot} — bold dot-product operator}
+\label{ss:zdot}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zdot}
@@ -563,7 +573,7 @@ The \cs{zdot} command produces a visually heavier centred dot for use as a vecto
 
     \opt{zdot-scale-absolute}
         & \optval{dot\@scale\@absolute}
-        & As \opt{scale-absolute}, for \cs{zdot}.
+        & As \opt{zscale-absolute}, for \cs{zdot}.
     \\
 
     \opt{zdot-scale-display}
@@ -610,6 +620,7 @@ The following example contrasts \cs{zdot} with the regular \cs{cdot} between vec
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zarg} — scaled function argument}
+\label{ss:zarg}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zarg}
@@ -623,7 +634,7 @@ The \cs{zarg} utility typesets an expression \macroMeta{expr} inside parentheses
 
     \opt{zarg-scale-absolute}
         & \optval{arg\@scale\@absolute}
-        & As \opt{scale-absolute}, for \cs{zarg}.
+        & As \opt{zscale-absolute}, for \cs{zarg}.
     \\
 
     \opt{zarg-scale-display}
@@ -691,6 +702,7 @@ The scaling follows the math style of the call, so the argument shrinks inside a
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zdiff} — differential or derivative}
+\label{ss:zdiff}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zdiff}
@@ -771,10 +783,11 @@ A leading \macroPlus, meaningful only in differential form, adds a kern before t
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zcond} — bar to represent evaluation conditions}
+\label{ss:zcond}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zcond}
-The \cs{zcond} utility typesets a vertical bar to represent evaluation conditions, with \macroMeta{condition} as a subscript. When \macroMeta{expr} is supplied and no stars are given, the bar auto-sizes via \cs{left.}\,\macroMeta{expr}\,\macroBar{right}, tracking \macroMeta{expr}'s height. Each star instead selects a fixed bar size, in which case \macroMeta{expr} is printed as-is, without \cs{left}/\cs{right} wrapping. It is compatible with text, inline and display modes, wrapping its output in \cs{ensuremath}. It has no package options.
+The \cs{zcond} utility typesets a vertical bar to represent evaluation conditions, with \macroMeta{condition} as a subscript. When \macroMeta{expr} is supplied and no stars are given, the bar auto-sizes via \cs{left.}\,\macroMeta{expr}\,\macroBar{right}, tracking \macroMeta{expr}'s height. Each star instead selects a fixed bar size, in which case \macroMeta{expr} is printed as-is, without \cs{left}/\cs{right} wrapping. It is compatible with text, inline and display modes, wrapping its output in \cs{ensuremath}. Its options are listed in Table~\ref{tb:zcond}.
 
 \begin{syntax}
   \cs{zcond}\macroStar\macroStar\macroStar\macroStar\macroOpt{expr}\macroArg{condition}
@@ -789,17 +802,41 @@ Starring:
   \item \textbf{four (\macroStar\macroStar\macroStar\macroStar)} — fixed \macroBar{Bigg}.
 \end{itemize}
 
-The following example prints the five bar sizes side by side:
+\begin{macroTable}{tb:zcond}{Options for \cs{zcond}.}
 
-\begin{tcblisting}{
-    math-shorthandz-tex,
-    lefthand width=0.7\linewidth,
-    halign lower=center,
-  }
-  \zcond{x=0}\zcond*{x=0}\zcond**{x=0}\zcond***{x=0}\zcond****{x=0}
-\end{tcblisting}
+    \opt{zcond-scale-absolute}
+        & \optval{cond\@scale\@absolute}
+        & As \opt{zscale-absolute}, for the condition.
+    \\
 
-The \macroMeta{condition} subscript is scaled by \cs{zscale} only in the auto-sized (no-star) path; it is printed at full size whenever any star is given. The following example shows the bar after a derivative, with an auto-sized bar around \macroMeta{expr}, and with a fixed-size bar:
+    \opt{zcond-scale-display}
+        & \optval{cond\@scale\@display}
+        & Factor by which the condition is scaled according to an unscaled subscript, for a bar in display style.
+    \\
+
+    \opt{zcond-scale-text}
+        & \optval{cond\@scale\@text}
+        & As \opt{zcond-scale-display}, in text style.
+    \\
+
+    \opt{zcond-scale-script}
+        & \optval{cond\@scale\@script}
+        & As \opt{zcond-scale-display}, in script style.
+    \\
+
+    \opt{zcond-scale-scriptscript}
+        & \optval{cond\@scale\@scriptscript}
+        & As \opt{zcond-scale-display}, in scriptscript style.
+    \\
+
+    \opt{zcond-scale-star}
+        & \optval{cond\@scale\@star}
+        & \opt{false}: only the condition of the auto-sized bar is scaled. \opt{true}: the condition of the fixed-size bars is scaled too (otherwise it keeps the size \TeX\ gives a subscript).
+    \\
+
+\end{macroTable}
+
+The \macroMeta{condition} subscript is scaled by \opt{zcond-scale-}\macroMeta{style}, where \macroMeta{style} is the math style of the bar (see \opt{zscale}). By default, only the auto-sized bar scales its condition; the fixed-size bars keep the size \TeX\ gives a subscript. The following example shows the bar after a derivative, with an auto-sized bar around \macroMeta{expr}, and with a fixed-size bar:
 
 \begin{tcblisting}{
     math-shorthandz-tex,
@@ -813,9 +850,33 @@ The \macroMeta{condition} subscript is scaled by \cs{zscale} only in the auto-si
   $\zcond**[\zdiff*{x}g]{x=0}$       % fixed \Big|
 \end{tcblisting}
 
+Setting \opt{zcond-scale-star} to \opt{true} extends the scaling to the conditions of all fixed-size bars, so that every bar size is governed by one set of factors:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    lefthand width=0.7\linewidth,
+    halign lower=center,
+  }
+  \newcommand{\auto}{\text{auto}}
+  \newcommand{\fixed}{\text{fixed}}
+  \nl[3]
+  $\zcond[\zdiff*{x}g]{\auto} \ne \zcond**[\zdiff*{x}g]{\fixed}$
+  \nl[3.5]
+  {
+    \setkeys{shorthand}{zcond-scale-star=true}
+    \setkeys{shorthand}{zcond-scale-text=1}
+    $\zcond[\zdiff*{x}g]{\auto} \ne \zcond**[\zdiff*{x}g]{\fixed}$
+    \setkeys{shorthand}{zcond-scale-display=1}
+    \[
+      \zcond[\zdiff*{x}g]{\auto} \ne \zcond**[\zdiff*{x}g]{\fixed}
+    \]
+  }
+\end{tcblisting}
+
+
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zscript} — four-way sub/superscripts}
+\label{ss:zscript}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zscript}
@@ -830,7 +891,11 @@ The \cs{zscript} engine attaches up to four independent scripts to a central \ma
     \macroRow{Pre-rendering}
     \opt{zscript-adaptative}
         & \macroSpan{\optval{script\@adaptative}}
-        & \opt{true}: scripts are offset from nucleus edges. \opt{false}: \TeX's classical placement (position and frame options are ignored). A leading \macroPlus\ modifier locally flips this.
+        & \opt{true}: scripts are offset from nucleus edges. \opt{false}: \TeX's classical placement (position, frame and reference options are ignored). A leading \macroPlus\ modifier locally flips this.
+    \\
+    \opt{zscript-reference}
+        & \macroSpan{(empty)}
+        & Math expression whose edges, instead of the printed nucleus's, define the positions of all scripts (see below). Empty: the nucleus itself.
     \\
     \opt{zscript-wrapper}
         & \macroSpan{\cs{symup}}
@@ -840,7 +905,7 @@ The \cs{zscript} engine attaches up to four independent scripts to a central \ma
     \macroRow{Starred Scripts}
     \opt{zscript-scale-absolute}
         & \macroSpan{\optval{script\@scale\@absolute}}
-        & As \opt{scale-absolute}, for starred scripts.
+        & As \opt{zscale-absolute}, for starred scripts.
     \\
     \opt{zscript-scale-display}
         & \macroSpan{\optval{script\@scale\@display}}
@@ -880,42 +945,42 @@ The \cs{zscript} engine attaches up to four independent scripts to a central \ma
     \macroRow{Trailing Scripts}
     \macroKey{zscript}{ur-v}
         & \optval{script\@math\@ur\@v} & \optval{script\@text\@ur\@v}
-        & Nucleus \emph{top} edge to upper-right script \emph{bottom} edge.
+        & Reference \emph{top} edge to upper-right script \emph{bottom} edge.
     \\
     \macroKey{zscript}{ur-h}
         & \optval{script\@math\@ur\@h} & \optval{script\@text\@ur\@h}
-        & Nucleus \emph{right} edge to upper-right script \emph{left} edge.
+        & Reference \emph{right} edge to upper-right script \emph{left} edge.
     \\
     \macroKey{zscript}{lr-v}
         & \optval{script\@math\@lr\@v} & \optval{script\@text\@lr\@v}
-        & Nucleus \emph{bottom} edge to lower-right script \emph{top} edge.
+        & Reference \emph{bottom} edge to lower-right script \emph{top} edge.
     \\
     \macroKey{zscript}{lr-h}
         & \optval{script\@math\@lr\@h} & \optval{script\@text\@lr\@h}
-        & Nucleus \emph{right} edge to lower-right script \emph{left} edge.
+        & Reference \emph{right} edge to lower-right script \emph{left} edge.
     \\
 
     \macroRow{Leading Scripts}
     \macroKey{zscript}{ul-v}
         & \optval{script\@math\@ul\@v} & \optval{script\@text\@ul\@v}
-        & Nucleus \emph{top} edge to upper-left script \emph{bottom} edge.
+        & Reference \emph{top} edge to upper-left script \emph{bottom} edge.
     \\
     \macroKey{zscript}{ul-h}
         & \optval{script\@math\@ul\@h} & \optval{script\@text\@ul\@h}
-        & Nucleus \emph{left} edge to upper-left script \emph{right} edge.
+        & Reference \emph{left} edge to upper-left script \emph{right} edge.
     \\
     \macroKey{zscript}{ll-v}
         & \optval{script\@math\@ll\@v} & \optval{script\@text\@ll\@v}
-        & Nucleus \emph{bottom} edge to lower-left script \emph{top} edge.
+        & Reference \emph{bottom} edge to lower-left script \emph{top} edge.
     \\
     \macroKey{zscript}{ll-h}
         & \optval{script\@math\@ll\@h} & \optval{script\@text\@ll\@h}
-        & Nucleus \emph{left} edge to lower-left script \emph{right} edge.
+        & Reference \emph{left} edge to lower-left script \emph{right} edge.
     \\
 
 \end{macroTable}
 
-Script placement is determined by the \opt{zscript-adaptative} option, to either use the standard \TeX\ engine or a dedicated internal engine with high customizability. The employment of a \macroPlus\ modifier directly following \cs{zscript} flips this placement choice. For both engines, applying a \macroStar\ modifier immediately before any script argument scales that script by the \opt{zscript-scale-}\macroMeta{style} option, where \macroMeta{style} is the math style of the nucleus (using \opt{zscale}, so nesting cannot bring a size below \opt{zscript-scale-scriptscript}). When using the dedicated engine, scripts are explicitly positioned boxes rather than using \TeX's script machinery, so they may freely overlap the nucleus (Figure \ref{fig:zscript}). All positions use one Cartesian system ($x$ positive right, $y$ positive up) and are measured from a \textit{nucleus edge} to the \textit{nearest script edge} as dimensionless ratios. Vertical options (\opt{v}, \opt{above}, \opt{below}) are relative to the x-height, and horizontal ones (\opt{h}, \opt{before}, \opt{after}) to the quad, both in the nucleus's math style. So, the same settings work for nuclei and scripts of any size, and rescaling a script moves its outer edge away from the nucleus without changing its anchor. The output is a single box whose height and depth encompass the nucleus and all scripts, preventing collisions with adjacent lines and exposing its true dimensions to subsequent commands (\eg{} further scripts or \cs{left}/\cs{right}, as shown below). The \opt{before}, \opt{after}, \opt{above} and \opt{below} options add (or remove, when negative) clearance around it.
+Script placement is determined by the \opt{zscript-adaptative} option, to either use the standard \TeX\ engine or a dedicated internal engine with high customizability. The employment of a \macroPlus\ modifier directly following \cs{zscript} flips this placement choice. For both engines, applying a \macroStar\ modifier immediately before any script argument scales that script by the \opt{zscript-scale-}\macroMeta{style} option, where \macroMeta{style} is the math style of the nucleus (using \opt{zscale}, so nesting cannot bring a size below \opt{zscript-scale-scriptscript}). When using the dedicated engine, scripts are explicitly positioned boxes rather than using \TeX's script machinery, so they may freely overlap the nucleus (Figure \ref{fig:zscript}). All positions use one Cartesian system ($x$ positive right, $y$ positive up) and are measured from a \textit{reference edge} (the edge of the nucleus, unless \opt{zscript-reference} is set) to the \textit{nearest script edge} as dimensionless ratios. Vertical options (\opt{v}, \opt{above}, \opt{below}) are relative to the x-height, and horizontal ones (\opt{h}, \opt{before}, \opt{after}) to the quad, both in the nucleus's math style. So, the same settings work for nuclei and scripts of any size, and rescaling a script moves its outer edge away from the nucleus without changing its anchor. The output is a single box whose height and depth encompass the nucleus and all scripts, preventing collisions with adjacent lines and exposing its true dimensions to subsequent commands (\eg{} further scripts or \cs{left}/\cs{right}, as shown below). The \opt{before}, \opt{after}, \opt{above} and \opt{below} options add (or remove, when negative) clearance around it.
 
 \begin{figure}[htbp]
   \centering
@@ -924,7 +989,7 @@ Script placement is determined by the \opt{zscript-adaptative} option, to either
     \draw[zmframe] (-1.7,-1.0) rectangle (4.8,3.0);
     \draw[zmunion] (-1.3,-0.5) rectangle (4.3,2.5);
     \draw[zmglyph] (0,0) rectangle (3,2);
-    \node at (1.5,1) {\Large $M$};
+    \node at (1.5,1) {\Large $N$};
     \draw[zmlim] (3.3,1.6) rectangle (4.3,2.5)  node[midway] {ur};
     \draw[zmlim] (3.2,-0.5) rectangle (4.2,0.4) node[midway] {lr};
     \draw[zmlim] (-1.3,1.6) rectangle (-0.3,2.5) node[midway] {ul};
@@ -960,7 +1025,7 @@ Script placement is determined by the \opt{zscript-adaptative} option, to either
     \draw[zmdim] (-1.3,1.0) -- node[zmlbl, above] {before} (-1.7,1.0);
     \draw[zmdim] (4.3,1.0) -- node[zmlbl, above] {after} (4.8,1.0);
   \end{tikzpicture}
-  \caption{Schematic of the \cs{zscript} options, written without the \opt{zscript-}\macroMeta{mode}\opt{-} prefix. Each script is anchored by its nearest edge to an edge of the nucleus (dashed references), at a distance given as a ratio of the x-height (vertical) or quad (horizontal) of the nucleus' style. The thick frame is the box \cs{zscript} hands to \TeX; the dashed rectangle is the union of nucleus and scripts, extended by the frame options. Distances are exaggerated for legibility.}
+  \caption{Schematic of the \cs{zscript} options, written without the \opt{zscript-}\macroMeta{mode}\opt{-} prefix. Each script is anchored by its nearest edge to an edge of the nucleus (dashed references), at a distance given as a ratio of the x-height (vertical) or quad (horizontal) of the style of the nucleus N. The thick frame is the box \cs{zscript} hands to \TeX; the dashed rectangle is the union of nucleus and scripts, extended by the frame options. Distances are exaggerated for legibility.}
   \label{fig:zscript}
 \end{figure}
 
@@ -1043,13 +1108,28 @@ It should also be emphasized that the placement of scripts with the dedicated en
       \zscript{g}[T] = g_{\text{T}} \ne \zscript+{g}[T]
       \nl[0.5]
       \zscript{\sum}[T] \ne \sum_{\text{T}} \ne \zscript+{\sum}[T]
-    \end{gather*}
+  \end{gather*}
+  }
+\end{tcblisting}
+
+Since positions follow the edges of the nucleus, a decorated nucleus such as $\tilde{\Psi}$ takes its upper scripts higher than the bare $\Psi$ does. The option \opt{zscript-reference} separates the two roles: the \textit{reference} is the expression whose edges define the positions of all scripts, while the \textit{printed} nucleus (the argument) is what is typeset, centred on the reference. The reference is set in the style of the nucleus, so it may be any math expression. The frame still covers the printed nucleus, so the accent never collides with the line above. The option is ignored when \opt{zscript-adaptative} is \opt{false} or when the option is empty (default). The following example compares the default placement with a bare reference:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.72\linewidth
+  }
+  $ \zscript{A}[][base] \ne \zscript{\tilde{A}}[][high] $
+  \nl[2.5]
+  {
+    \setkeys{shorthand}{zscript-reference=A}
+    $ \zscript{A}[][base] = \zscript{\tilde{A}}[][base] $
   }
 \end{tcblisting}
 
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zprime} — prime accents}
+\label{ss:zprime}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zprime}
@@ -1074,7 +1154,7 @@ Starring:
     \\
     \opt{zprime-scale-absolute}
         & \macroSpan{\optval{prime\@scale\@absolute}}
-        & As \opt{scale-absolute}, for the prime cluster.
+        & As \opt{zscale-absolute}, for the prime cluster.
     \\
     \opt{zprime-scale-display}
         & \macroSpan{\optval{prime\@scale\@display}}
@@ -1278,6 +1358,7 @@ These examples show how primes can be moved out of their default position:
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zlim} — limit with variable and value}
+\label{ss:zlim}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zlim}
@@ -1299,7 +1380,7 @@ Starring and optional arguments:
     \macroRow{Starred Parts}
     \opt{zlim-scale-absolute}
         & \macroSpan{\optval{lim\@scale\@absolute}}
-        & As \opt{scale-absolute}, for starred parts.
+        & As \opt{zscale-absolute}, for starred parts.
     \\
     \opt{zlim-scale-display}
         & \macroSpan{\optval{lim\@scale\@display}}
@@ -1404,6 +1485,7 @@ The output box keeps neighbouring lines apart in text and inline math, and the p
 % ------------------------------------------------------------------------------
 \clearpage
 \subsection{\cs{zint} — configurable integral}
+\label{ss:zint}
 % ------------------------------------------------------------------------------
 
 \macroDescription{\zint}
@@ -1620,7 +1702,7 @@ Three placement classes are defined (Figures~\ref{fig:zint-limits}~and~\ref{fig:
   \label{fig:zint-frame}
 \end{figure}
 
-Between consecutive glyphs and around the \cs{cdots} bridge, only the cluster kerns \opt{zint-}\macroMeta{mode}\opt{-separation}, \opt{-dots-left} and \opt{-dots-right} apply; \opt{zint-}\macroMeta{mode}\opt{-before} and \opt{-after} control the space before the integral and between it and the integrand, while \opt{-above} and \opt{-below} add or, when negative, remove clearance around the output box. All positions and frame values are dimensionless \emph{ratios} of the integral's math-style x-height (vertical) or quad (horizontal), so they scale automatically, including in exponents; only the \opt{separation}, \opt{dots-left} and \opt{dots-right} kerns remain lengths. The star scaling options \opt{zint-scale-}\macroMeta{style} are independent of mode, class and limit: \macroMeta{style} is \opt{display}, \opt{text}, \opt{script} or \opt{scriptscript}, identifying the integral's style, and the same four factors apply to both limits; \opt{zint-scale-absolute} determines whether they multiply the unstarred limit size (\opt{false}) or the normal size (\opt{true}), as with \opt{scale-absolute}.
+Between consecutive glyphs and around the \cs{cdots} bridge, only the cluster kerns \opt{zint-}\macroMeta{mode}\opt{-separation}, \opt{-dots-left} and \opt{-dots-right} apply; \opt{zint-}\macroMeta{mode}\opt{-before} and \opt{-after} control the space before the integral and between it and the integrand, while \opt{-above} and \opt{-below} add or, when negative, remove clearance around the output box. All positions and frame values are dimensionless \emph{ratios} of the integral's math-style x-height (vertical) or quad (horizontal), so they scale automatically, including in exponents; only the \opt{separation}, \opt{dots-left} and \opt{dots-right} kerns remain lengths. The star scaling options \opt{zint-scale-}\macroMeta{style} are independent of mode, class and limit: \macroMeta{style} is \opt{display}, \opt{text}, \opt{script} or \opt{scriptscript}, identifying the integral's style, and the same four factors apply to both limits; \opt{zint-scale-absolute} determines whether they multiply the unstarred limit size (\opt{false}) or the normal size (\opt{true}), as with \opt{zscale-absolute}.
 
 \clearpage
 \begin{macroTable}[Option & Math & Text & Description]{tb:zint}{Options for \cs{zint}. The \macroMeta{mode} is \opt{math} (display) or \opt{text} (text, script and scriptscript).}
@@ -1628,7 +1710,7 @@ Between consecutive glyphs and around the \cs{cdots} bridge, only the cluster ke
     \macroRow{Starred Limits}
     \opt{zint-scale-absolute}
         & \macroSpan{\optval{int\@scale\@absolute}}
-        & As \opt{scale-absolute}, for starred limits.
+        & As \opt{zscale-absolute}, for starred limits.
     \\
     \opt{zint-scale-display}
         & \macroSpan{\optval{int\@scale\@display}}
@@ -1832,10 +1914,120 @@ With two stars before \macroMeta{type}, the \opt{right} class is applied for a m
     Increased spacing: $\zint[][][2] f \zdiff{A}$.
   }
 \end{tcblisting}
+% ==============================================================================
+\clearpage
+\section{Aliases}
+\label{sc:aliases}
+% ==============================================================================
+
+\macroDescription{\zalias}
+The \cs{zalias} utility defines a new command based on one of the package commands that have options, but with its own option values. It can be used when different sets of options need to be re-used multiple times in the same document. The \macroMeta{new} command takes the same arguments of the \macroMeta{base} command.
+
+\begin{syntax}
+  \cs{zalias}\macroArg{new}\macroArg{base}\macroArg{key=value,\dots}
+\end{syntax}
+
+The list \macroMeta{key=value,\dots} contains option names and values, which are validated during definition. The \macroMeta{key} is automatically prepended with the option prefix of the \macroMeta{base} family (\eg \opt{zscript-} for \cs{zscript}; \cs{zvec} and \cs{zmat} use \opt{zline-}). This guards \cs{zalias} against changing the options of an unrelated command. Listed key-value pairs are changed inside a dedicated group, so unlisted options continue using the values defined outside the definition (usually the package defaults). An alias may be based on another alias and may be redefined at any point, but all definitions are frozen. A later redefinition of an alias does not update its sub-aliases already based on it. An existing macro, including every command of the package, cannot be overwritten.
+
+The following example defines an alias to address the same case presented in Section~\ref{ss:zscript}:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.8\linewidth
+  }
+  \zalias{\zscriptA}{\zscript}{reference=A}
+  \nl[1.5]
+  \begin{gather*}
+    \zscript{A}[][base] \ne \zscript{\tilde{A}}[][high]
+    \nl[0.5]
+    \zscript{A}[][base] = \zscriptA{\tilde{A}}[][base]
+  \end{gather*}
+\end{tcblisting}
+
+\macroDescription{\zreset}
+Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it.
+
+The following example shows the inheritance, and how an inner alias with \cs{zreset} avoids it:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.8\linewidth
+  }
+  \zalias{\zscriptLow}{\zscript}{text-lr-v=-1}
+  \zalias{\zscriptRaw}{\zscript}{text-lr-v=\zreset}
+  \nl[3]
+  $ {x}_{k_{b}} $
+  \nl
+  $ \zscript{x}[\zscript{k}[b]] = \zscript{x}[\zscriptRaw{k}[b]] $
+  \nl
+  $ \zscript{x}[\zscriptLow{k}[b]] \ne \zscript{x}[\zscriptRaw{k}[b]] $
+  \nl[0.5]
+  $ \zscriptLow{x}[\zscript{k}[b]] \ne \zscriptLow{x}[\zscriptRaw{k}[b]] $
+  \nl[0.5]
+  \nl[0.5]
+  $ \zscriptLow{x}[\zscriptLow{k}[b]] \ne \zscriptLow{x}[\zscriptRaw{k}[b]] $
+\end{tcblisting}
+
+The following example shows that \opt{reset} only affects the keys before it:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.73\linewidth
+  }
+  \zalias{\zscriptUndo}{\zscript}{text-lr-v=-1, reset}
+  \zalias{\zscriptKeep}{\zscript}{reset, text-lr-v=-1}
+  \nl[4]
+  $
+    \zscript{A}[base] = \zscriptUndo{A}[base] \ne \zscriptKeep{A}[low]
+  $
+\end{tcblisting}
+
+The restored value is the one acting where the outermost alias is called, not one of the intermediate aliases:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.7\linewidth
+  }
+  \zalias{\zscriptLow}{\zscript}{text-lr-v=-3}
+  \zalias{\zscriptHigh}{\zscript}{text-lr-v=3}
+  \zalias{\zscriptRaw}{\zscript}{text-lr-v=\zreset}
+  \nl[4]
+  $ \zscript{x}[\zscript{base}[\zscript{y}[base]]] $
+  \nl[2]
+  $
+    \zscriptHigh{x}[\zscriptLow{high}[\zscript{y}[low]]]
+    \ne
+    \zscriptHigh{x}[\zscriptLow{high}[\zscriptRaw{y}[base]]]
+  $
+\end{tcblisting}
+
+and the restored value is also not the one at definition:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.7\linewidth
+  }
+  \zalias{\zscriptLow}{\zscript}{text-lr-v=-3}
+  \zalias{\zscriptHigh}{\zscript}{text-lr-v=3}
+  \zalias{\zscriptRaw}{\zscript}{text-lr-v=\zreset}
+  \nl[4]
+  $ \zscript{x}[\zscript{base}[\zscript{base}[base]]] $
+  \nl[4]
+  {
+    \setkeys{shorthand}{zscript-text-lr-v=0}
+    $
+      \zscriptHigh{x}[\zscriptLow{high}[\zscript{low}[low]]]
+      \ne
+      \zscriptHigh{x}[\zscriptLow{high}[\zscriptRaw{low}[base]]]
+    $
+  }
+\end{tcblisting}
+
 
 % ==============================================================================
 \clearpage
 \section{Combined Examples}
+\label{sc:combined}
 % ==============================================================================
 
 \subsection{Fundamental theorem of calculus}
@@ -1997,6 +2189,25 @@ With two stars before \macroMeta{type}, the \opt{right} class is applied for a m
 % ==============================================================================
 
 \begin{description}[style=nextline, leftmargin=2cm, labelwidth=!]
+
+  \item[v1.1.0 (2026/10/23)] Aliases of commands. New options. Standardized option declaration.
+    \begin{itemize}[nosep]
+
+      \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package. The value \cs{zreset} and the key \opt{reset} restore options to the values they had when the outermost enclosing alias call began.
+      
+      \item \textbf{Warning: breaking change in a minor release.} The keys of \cs{zscale} were renamed from \opt{scale-}\macroMeta{style} and \opt{scale-absolute} to \opt{zscale-}\macroMeta{style} and \opt{zscale-absolute}. They were a typo against the rule that every key carries the full name of its command, and the version is bumped to v1.1.0 instead of v2.0.0 for that reason only, but it \textit{does} break existing documents: replace the old keys, in \cs{usepackage} and in \cs{setkeys}; no alias is kept.
+
+      \item \textbf{Scale keys.} The keys \opt{scale-}\macroMeta{style} used to live in a global section of the package because \cs{zscale} had a scaling shared by all commands. Since every command now owns its four factors and switch, that distinction was gone, and the keys were moved to the section of \cs{zscale}, where they belong.
+
+      \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package.
+
+      \item \cs{zscript}: new option \opt{zscript-reference}, a math expression whose edges, instead of the printed nucleus's, define the positions of all scripts, so that a decorated nucleus (\eg{} $\tilde{\Psi}$) takes its scripts where the bare one does. The leading \macroPlus\ is now resolved after the keys of an alias are applied.
+
+      \item \cs{zcond}: the condition is now scaled through its own options \opt{zcond-scale-}\macroMeta{style}, \opt{zcond-scale-absolute} and the new switch \opt{zcond-scale-star}, keyed to the math style of the bar. By default the output is essentially unchanged.
+
+      \item \textbf{Declaration of options.} All options are now declared by one generator in the global section, instead of one helper per command or by hand, with unchanged macro names and defaults. The generator also registers every option of each command, which is what \cs{zalias} uses to take snapshots and to apply \opt{reset}.
+
+    \end{itemize}
 
   \item[v1.0.0 (2026/10/14)] Package renamed to \pkg{math-shorthandz}. First public release.
     \begin{itemize}[nosep]

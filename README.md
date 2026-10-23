@@ -74,6 +74,17 @@ or run `l3build doc` in the repository. The `gind.ist` index style is required;
 Issues and pull requests are welcome at
 https://github.com/tplobo/math-shorthandz.
 
+### TODO
+
+1. **Refactor `math-shorthandz.sty`** to remove duplication. Compare the rendered manual before and after each step to catch layout drift:
+   - shared helpers for the frame (before/after/above/below and `\box_set_ht:Nn`/`\box_set_dp:Nn`), the overhang computation and the `\rlap`/`\box_move_up:nn` emit used by `\zscript`, `\zprime`, `\zlim` and `\zint`;
+   - one shared four-branch `\mathchoice` front end, with mode and sub-style derived once, which would also take over `\__msz_begin:` and `\group_end:`;
+   - set the per-call state (form, class, mode) in the same place in every command (`\zprime` sets it in its builder, the others in the public command).
+1. **Rename the scale options for v2.0.0.** Replace the term "scale" in all keys (`zdot-scale-text`, `zscale-text`, ...) by a shorter one, so that `zscale` gets keys of the same form as the other commands. Candidates: `size`, `norm`, `rule`. Breaks every existing key, so it must wait for a major release.
+1. **`\zscript` reference**: split `zscript-reference` into one reference for the vertical positions and one for the horizontal ones. Today one expression supplies all four edges, and the printed nucleus is centred on it, which is wrong when the two glyphs differ in width (`\mathbf{\Psi}` against `\Psi`).
+1. **`\zalias*`**: a starred form that forces the definition over any macro that is not a command of the package. Not needed so far.
+1. **`\zfrac`**: the "numerator-only" branch of `\__msz_frac_render:nn` is dead code (`\l__msz_frac_den_present_bool` is always true), and its `\bool_if:NF` has two brace groups, so the second would run unconditionally if the bool were ever false. Decide what the branch is for, or remove it. Low priority.
+
 ### Code and documentation guidelines
 
 - `math-shorthandz.sty` has one section per public command, in dependency

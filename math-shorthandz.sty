@@ -14,30 +14,23 @@
 %   \zprime   prime superscript or accent, context-sensitive scaling
 %   \zlim     limit operator with variable and value, below or as a subscript
 %   \zint     configurable integral with glyph type and limit placement
+%   \zalias   variants of the commands above with their own option values
 %
 % Dependencies:
 %   amsmath, unicode-math, graphicx, nicefrac, xkeyval
 %   (expl3 and xparse are part of the LaTeX kernel since 2020)
 %
 % Structure:
-%   This file has one section per public command, ordered from the commands
-%   that depend on nothing to those that build on the others. Each section is
-%   self-contained: package options, constants, helper functions and the
-%   public command are defined in that order, so a fix can be tested by
-%   replacing the whole section. A short "Global" section up front holds the
-%   handful of items shared across more than one command.
+%   One section per public command, ordered from the commands that depend on
+%   nothing to those that build on the others. Each section keeps the same
+%   order: options, constants, helpers, public command. The manual
+%   (math-shorthandz.tex) is the reference for behaviour; the comments here
+%   only give syntax and implementation notes.
 %
-%   NOTE: no option is frozen at load time. Every section reads its
-%   \msz@... macros at call time, so options given to
-%   \usepackage[...]{math-shorthandz} take effect, and any of them may be
-%   changed, or locally overridden inside a group, with
-%   \setkeys{shorthand}{...}.
-%
-%   Option key names are always prefixed with the full public command name
-%   (e.g. zint-, zdiff-, zline-) and belong to the keyval family `shorthand`;
-%   internal \msz@... macro names drop the leading "z" purely to keep the
-%   namespace short, since they already live under the \msz@ prefix (the
-%   initials of math-shorthandz).
+%   Every option is a \msz@... macro read at call time, so it may be set with
+%   \usepackage[...] or \setkeys{shorthand}{...}, globally or inside a group.
+%   Key names carry the full command name (zint-, zdiff-, ...); macro names
+%   drop the leading "z" (\msz@int@..., initials of math-shorthandz).
 %
 % Copyright (C) 2020-2026 Tiago Pomella Lobo
 %
@@ -59,7 +52,7 @@
 % ##############################################################################
 
 \NeedsTeXFormat{LaTeX2e}[2020/10/01]
-\ProvidesPackage{math-shorthandz}[2026/10/14 v1.0.0 smart shorthands for typesetting math]
+\ProvidesPackage{math-shorthandz}[2026/10/23 v1.1.0 smart shorthands for typesetting math]
 
 % ------------------------------------------------------------------------------
 % Required packages
@@ -85,62 +78,38 @@
 % ==============================================================================
 % GLOBAL
 % ------------------------------------------------------------------------------
-% Items shared by more than one command section: the package-wide per-style
-% `scale-*` options read by \zscale and the style-aware UNITS in which
-% \zscript, \zprime, \zlim and \zint measure every position and frame margin.
-% Everything else lives entirely inside its own command's section below.
-%
-% Units: every position/frame option of those commands is a dimensionless
-% RATIO of a unit measured in the math style of the nucleus, so distances
-% shrink by themselves inside exponents, subscripts, etc. (unlike ex/em/pt,
-% which follow the ambient text font):
-%   vertical    (v, above, below)   x-height of the style
-%   horizontal  (h, before, after)  quad (1em) of the style
-% The axis height of the style is also measured, for commands that must
-% re-centre scaled content (\zdot).
-%
-% Scales: every command that scales content (\zscale, \zdot, \zarg, \zscript,
-% \zprime, \zlim, \zint) owns FOUR factors, one per math style (display, text,
-% script, scriptscript) of the context in which it is called, and ONE switch
-% `<command>-scale-absolute` (true | false) that selects what they mean:
-%   true   ABSOLUTE (default): content is set in the NORMAL size
-%          (\displaystyle in display context, \textstyle otherwise) and then
-%          multiplied by the factor, which is thus the final size relative to
-%          the normal one.
-%   false  RELATIVE: content is set in the ambient (or, for scripts and
-%          limits, the script) style, as TeX would, and then multiplied by
-%          the factor. TeX's own shrinking and the factor stack. All factors
-%          equal to 1 reproduces plain LaTeX.
-% Any value other than `true` counts as false.
-%
-% Choosing the factors: with r the size (relative to the normal one) of the
-% REFERENCE style and k the wanted fraction of it, the absolute factor is
-% k*r and the relative one is k. The reference is the style of the call for
-% \zscale, \zdot, \zarg and \zprime, and one style below that of the nucleus
-% (never below scriptscript) for \zscript, \zlim and \zint. Math fonts shrink
-% script and scriptscript style to about 0.7 and 0.5 of the normal size, so
-% the defaults of every command are absolute factors chosen that way.
-%
-% Nesting guard: TeX never sets anything below scriptscript style, but a
-% scaled box is invisible to its styles, so it is tracked explicitly.
-% \l__msz_scale_acc_fp holds the geometric scale of the enclosing scaled
-% boxes (1 outside any). A nested call may be shrunk by it only down to the
-% size of a scriptscript call of the same command: its `scale-scriptscript`
-% (times the measured size of scriptscript style when relative). A factor
-% already below that size, from an option or given explicitly, is honoured
-% as it is and never shrunk further by nesting.
+% Shared by several commands:
+%   \msz@opt       declares an option macro and its key, and registers the
+%                  macro in its family (for \zalias snapshots and resets)
+%   \__msz_begin:  opens every call of a command with options; applies the
+%                  keys of the alias that called it (see \zalias)
+%   units          ratios of a style's x-height (v, above, below) and quad
+%                  (h, before, after); the axis height is also measured
+%   scales         four factors per math style plus `<command>-scale-absolute`
+%                  per command (true: set in normal size, then multiplied;
+%                  false: set in the ambient style, then multiplied)
+%   nesting guard  \l__msz_scale_acc_fp is the scale of the enclosing scaled
+%                  boxes; a nested call is shrunk by it only down to the size
+%                  of a scriptscript call of the same command
 % ==============================================================================
 
-  \newcommand{\msz@scale@display}{1}
-  \newcommand{\msz@scale@text}{1}
-  \newcommand{\msz@scale@script}{0.7}
-  \newcommand{\msz@scale@scriptscript}{0.6}
-  \newcommand{\msz@scale@absolute}{true}
-  \define@key{shorthand}{scale-display}{\renewcommand{\msz@scale@display}{#1}}
-  \define@key{shorthand}{scale-text}{\renewcommand{\msz@scale@text}{#1}}
-  \define@key{shorthand}{scale-script}{\renewcommand{\msz@scale@script}{#1}}
-  \define@key{shorthand}{scale-scriptscript}{\renewcommand{\msz@scale@scriptscript}{#1}}
-  \define@key{shorthand}{scale-absolute}{\renewcommand{\msz@scale@absolute}{#1}}
+  % \msz@opt {family} {key suffix} {macro suffix} {default} — declares the
+  % option macro \msz@<family>@<macro suffix> and its key z<family>-<key
+  % suffix>; the first call of a family also declares z<family>-reset. Key
+  % names are also collected in \msz@keysfull and \msz@keys (used by the manual).
+  \def\msz@keysfull{}
+  \def\msz@keys{}
+  \newcommand{\msz@opt}[4]{%
+    \@ifundefined{msz@reg@#1}{%
+      \expandafter\gdef\csname msz@reg@#1\endcsname{}%
+      \define@key{shorthand}{z#1-reset}[]{\msz@reset{#1}}%
+    }{}%
+    \expandafter\newcommand\csname msz@#1@#3\endcsname{#4}%
+    \define@key{shorthand}{z#1-#2}{\msz@opt@set{#1}{#3}{##1}}%
+    \expandafter\g@addto@macro\csname msz@reg@#1\endcsname{\msz@reg@do{#1}{#3}}%
+    \g@addto@macro\msz@keysfull{z#1-#2,}%
+    \g@addto@macro\msz@keys{#2,}%
+  }
 
 \ExplSyntaxOn
 
@@ -149,8 +118,27 @@
   \dim_new:N \l__msz_unit_axis_dim
   \box_new:N \l__msz_unit_box
 
-  % sets the horizontal (quad) and vertical (x-height) units and the axis
-  % height for style #1
+  % keys and family of the alias being called, waiting for its command
+  \tl_new:N  \g__msz_alias_tl
+  \tl_new:N  \g__msz_alias_fam_tl
+
+  \msg_new:nnn { math-shorthandz } { reset-misuse }
+    {
+      \c_backslash_str zreset~is~only~valid~as~the~value~of~a~key~in~
+      \c_backslash_str zalias.
+    }
+  \msg_new:nnn { math-shorthandz } { reset-outside }
+    {
+      Option~reset~(key~reset~or~value~\c_backslash_str zreset)~is~only~
+      available~in~the~keys~of~\c_backslash_str zalias.
+    }
+
+  % protected marker: as the value of a key, restores the option from the
+  % snapshot of the alias call (see \msz@opt@set)
+  \cs_new_protected:Npn \zreset
+    { \msg_error:nn { math-shorthandz } { reset-misuse } }
+
+  % sets the units (horizontal quad, vertical x-height, axis height) for style #1
   \cs_new_protected:Npn \__msz_unit:N #1
     {
       \hbox_set:Nn \l__msz_unit_box { $ \m@th #1 x $ }
@@ -165,22 +153,77 @@
   \cs_new:Npn \__msz_ratio:nN #1#2
     { \fp_to_dim:n { (#1) * #2 } }
 
+  % registry actions, run over the options of a family by its list
+  % \msz@reg@<family>: \msz@reg@do is \let to one of them just before the list
+  % is expanded. Arguments: #1 family, #2 macro suffix.
+  \cs_new_protected:Npn \msz@reg@do #1#2 { }
+  \cs_new_protected:Npn \msz@snap@do #1#2
+    { \cs_set_eq:cc { msz@snap@ #1 @ #2 } { msz@ #1 @ #2 } }
+  \cs_new_protected:Npn \msz@rest@do #1#2
+    { \cs_set_eq:cc { msz@ #1 @ #2 } { msz@snap@ #1 @ #2 } }
+
+  % copies every option of family #1 to its snapshot, in the current group,
+  % and marks the family as snapshotted
+  \cs_new_protected:Npn \__msz_snap:n #1
+    {
+      \cs_set:cpn { msz@snap@ #1 @flag } { }
+      \cs_set_eq:NN \msz@reg@do \msz@snap@do
+      \use:c { msz@reg@ #1 }
+    }
+
+  % key z<family>-reset: restores all options of family #1 from the snapshot
+  \cs_new_protected:Npn \msz@reset #1
+    {
+      \cs_if_exist:cTF { msz@snap@ #1 @flag }
+        {
+          \cs_set_eq:NN \msz@reg@do \msz@rest@do
+          \use:c { msz@reg@ #1 }
+        }
+        { \msg_error:nnn { math-shorthandz } { reset-outside } { #1 } }
+    }
+
+  % restores option #2 of family #1 from the snapshot
+  \cs_new_protected:Npn \__msz_opt_restore:nn #1#2
+    {
+      \cs_if_exist:cTF { msz@snap@ #1 @flag }
+        { \cs_set_eq:cc { msz@ #1 @ #2 } { msz@snap@ #1 @ #2 } }
+        { \msg_error:nnn { math-shorthandz } { reset-outside } { #1 } }
+    }
+
+  % sets option #2 of family #1 to the value #3, or restores it if it is \zreset
+  \cs_new_protected:Npn \msz@opt@set #1#2#3
+    {
+      \tl_if_eq:nnTF {#3} { \zreset }
+        { \__msz_opt_restore:nn {#1} {#2} }
+        { \cs_set:cpn { msz@ #1 @ #2 } { #3 } }
+    }
+
+  % opens the group of one call of a command with options and applies in it
+  % the keys of the alias that called it, if any. Outermost alias call of a
+  % family: first snapshots its options. The command closes the group with
+  % \group_end:, which adds no atom, so spacing and class are those of the output.
+  \cs_new_protected:Npn \__msz_begin:
+    {
+      \group_begin:
+      \tl_if_empty:NF \g__msz_alias_tl
+        {
+          \tl_set_eq:NN \l_tmpa_tl \g__msz_alias_tl
+          \tl_set_eq:NN \l_tmpb_tl \g__msz_alias_fam_tl
+          \tl_gclear:N \g__msz_alias_tl
+          \cs_if_exist:cF { msz@snap@ \l_tmpb_tl @flag }
+            { \__msz_snap:n { \l_tmpb_tl } }
+          \exp_args:NnV \setkeys { shorthand } \l_tmpa_tl
+        }
+    }
+
 \ExplSyntaxOff
 
 % ==============================================================================
 % \zpunct {punct}
 % ------------------------------------------------------------------------------
-% Places punctuation at the right end of a display line, where its equation
-% number goes. In a numbered row it is attached immediately before the number,
-% separated from it by a space (a \tagform@ hook). In a row of a starred
-% environment (equation*, gather*, flalign*, ...) it is typeset flush right
-% through amsmath's own \tag*, exactly where a number would stand, so no number
-% is required. Must be placed in the row it ends, before its \\. A row left
-% unnumbered inside a numbered environment (\notag, \nonumber) discards the
-% punctuation, so it can never leak into a later number or \eqref.
-%
-%   \begin{equation}  E = mc^2 \zpunct{,} \end{equation}
-%   \begin{flalign*} &E = mc^2 \zpunct{,} \\ &F = ma \zpunct{.} \end{flalign*}
+% Punctuation at the right end of a display line, before the equation number
+% (numbered rows) or flush right through \tag* (starred environments).
+% Discarded in \notag/\nonumber rows.
 % ==============================================================================
 
   \newcommand{\msz@currentpunct}{}
@@ -205,23 +248,13 @@
 % ==============================================================================
 % \zline [count] {symbol}   |   \zvec {symbol}   |   \zmat {symbol}
 % ------------------------------------------------------------------------------
-% \zline underlines a symbol with <count> horizontal rules (default: 1),
-% each of thickness `zline-thickness`, separated from the symbol by
-% `zline-depth` and from each other by `zline-separation`. Rule width matches
-% the symbol's natural width exactly. Safe in text and math mode.
-%
-% \zvec and \zmat are convenience wrappers producing one and two underlines
-% respectively, for vector and matrix notation.
-%
-%   \zline[3]{W}       \zvec{u}       \zmat{A}
+% <count> rules under the symbol; \zvec and \zmat are the one- and two-rule
+% wrappers. All three use the `zline-` keys.
 % ==============================================================================
 
-  \newcommand{\msz@line@depth}{2pt}
-  \newcommand{\msz@line@thickness}{0.4pt}
-  \newcommand{\msz@line@separation}{0.9pt}
-  \define@key{shorthand}{zline-depth}{\renewcommand{\msz@line@depth}{#1}}
-  \define@key{shorthand}{zline-thickness}{\renewcommand{\msz@line@thickness}{#1}}
-  \define@key{shorthand}{zline-separation}{\renewcommand{\msz@line@separation}{#1}}
+  \msz@opt{line}{depth}{depth}{2pt}
+  \msz@opt{line}{thickness}{thickness}{0.4pt}
+  \msz@opt{line}{separation}{separation}{0.9pt}
 
 \ExplSyntaxOn
 
@@ -233,6 +266,7 @@
   \NewDocumentCommand \zline { O{1} m }
     {
       \leavevmode
+      \__msz_begin:
       \dim_set:Nn \l__msz_line_depth_dim     { \msz@line@depth       }
       \dim_set:Nn \l__msz_line_thickness_dim { \msz@line@thickness   }
       \dim_set:Nn \l__msz_line_sep_dim       { \msz@line@separation  }
@@ -252,6 +286,7 @@
                 { \kern \l__msz_line_sep_dim }
             }
         }
+      \group_end:
     }
 
   \NewDocumentCommand \zvec { m } { \ensuremath { \zline[1]{#1} } }
@@ -262,20 +297,8 @@
 % ==============================================================================
 % \zfrac * * [num] {num} [den] {den}
 % ------------------------------------------------------------------------------
-% Flexible fraction. {x} = plain, [x] = parenthesised. Single argument is
-% treated as denominator (numerator defaults to 1). Star: \nicefrac.
-% Double star: slash notation n/d. No star: \frac. The whole output is
-% ALWAYS wrapped in \ensuremath, regardless of style, so operands may
-% contain math (\alpha, \sqrt{...}, etc.) even when \zfrac is called from
-% text mode — parenthesisation via \left(\right) then also stays valid,
-% since it always executes inside guaranteed math. Safe in text, inline,
-% and display mode.
-%
-% This section has no package options: unlike \zline or \zprime, \zfrac's
-% layout is fully determined by its stars and its argument delimiters, so
-% there is nothing left to tune.
-%
-%   \zfrac{n}{d}   \zfrac{n}[d]   \zfrac[n]{d}   \zfrac[n][d]   \zfrac[d]
+% {x} plain, [x] parenthesised; one argument is the denominator. No star:
+% \frac; one star: \nicefrac; two stars: n/d. No options.
 % ==============================================================================
 
 \ExplSyntaxOn
@@ -286,18 +309,14 @@
   \bool_new:N \l__msz_frac_num_paren_bool
   \bool_new:N \l__msz_frac_den_paren_bool
   \bool_new:N \l__msz_frac_den_present_bool
-  % NOTE: \l__msz_frac_den_present_bool is unconditionally set true by
-  % \__msz_frac_parse:nnnnnn below, so the "no denominator" branch in
-  % \__msz_frac_render:nn is currently dead code. Potentially useful
-  % if a "numerator-only" call form proves needed in the future.
+  % NOTE: den_present is always true (see \__msz_frac_parse:nnnnnn), so the
+  % "no denominator" branch of \__msz_frac_render:nn is dead code (see TODO).
 
-  % wraps {math} in \left( \right); always called from within \ensuremath,
-  % so plain math-mode delimiters are safe regardless of the caller's mode
+  % wraps #1 in \left( \right); always called inside \ensuremath
   \cs_new:Npn \__msz_frac_paren:n #1
     { \left( #1 \right) }
 
-  % renders one operand — #1 the paren-bool controlling it, #2 its token
-  % list — parenthesising it via \__msz_frac_paren:n when #1 is true
+  % renders operand #2, parenthesised when bool #1 is true
   \cs_new:Npn \__msz_frac_arg:Nn #1 #2
     {
       \bool_if:NTF #1
@@ -305,9 +324,7 @@
         {#2}
     }
 
-  % dispatches to the requested style once the numerator/denominator and
-  % their paren-bools have been set by \__msz_frac_parse:nnnnnn —
-  % #1 star (nicefrac/slash)  #2 double-star (slash)
+  % typesets the fraction in the requested style — #1 star  #2 double star
   \cs_new:Npn \__msz_frac_render:nn #1 #2
     {
       \bool_if:NF \l__msz_frac_den_present_bool
@@ -335,8 +352,8 @@
         }
     }
 
-  % parses the four o g o g arguments passed by \zfrac into the num/den
-  % token lists and their paren-bools, covering every {}/[] combination
+  % maps the o g o g arguments of \zfrac to the num/den token lists and their
+  % paren-bools, for every {}/[] combination
   \cs_new_protected:Npn \__msz_frac_parse:nnnnnn #1 #2 #3 #4 #5 #6
     {
       \IfNoValueTF {#3}
@@ -407,27 +424,17 @@
 % ==============================================================================
 % \zscale [factor] {math}
 % ------------------------------------------------------------------------------
-% Scales math content uniformly by <factor>. Omitting <factor> uses the
-% package option of the math style of the call (`scale-display`, `scale-text`,
-% `scale-script` or `scale-scriptscript`); an explicit <factor> replaces it
-% in whichever style the call sits. What the factor multiplies depends on
-% the switch `scale-absolute` (see GLOBAL): true (default) -> the content set
-% in the normal size; false -> the content set in the ambient style. The
-% defaults are absolute factors derived as in "Choosing the factors" in
-% GLOBAL. A nested call is guarded against shrinking below the scriptscript
-% size (see "Nesting guard" in GLOBAL), but a factor given explicitly is
-% never overridden. The output is one \mathord box (wrapped outside the
-% \mathchoice, so a script attached afterwards sees a real atom). Safe in
-% both math and text mode via an internal \ensuremath boundary.
-%
-% The helpers below are shared by \zdot, \zarg, \zscript, \zprime, \zlim and
-% \zint, each of which passes its own option prefix (dot@scale, arg@scale,
-% script@scale, prime@scale, lim@scale, int@scale), so every command reads
-% its own four factors and its own switch.
-%
-%   \zscale{x^2}            % default factor of the context
-%   \zscale[0.8]{\nabla f}  % explicit factor
+% Scales math content by <factor>, default `zscale-<style>` of the call.
+% The helpers below are shared by every command that scales content; each
+% passes its own option prefix (dot@scale, arg@scale, ...) and reads its own
+% four factors and switch. Output: one \mathord box.
 % ==============================================================================
+
+  \msz@opt{scale}{display}{display}{1}
+  \msz@opt{scale}{text}{text}{1}
+  \msz@opt{scale}{script}{script}{0.7}
+  \msz@opt{scale}{scriptscript}{scriptscript}{0.6}
+  \msz@opt{scale}{absolute}{absolute}{true}
 
 \ExplSyntaxOn
 
@@ -437,10 +444,9 @@
 
   \dim_new:N \l__msz_scale_quad_dim
 
-  % geometric scale of the enclosing scaled boxes (1 outside any), and the
-  % one that applies inside the box being built; the size of the style the
-  % content is set in (relative to the normal one), the size the call would
-  % have alone, and the size of a scriptscript call of the same command
+  % accumulated scale of the enclosing boxes, scale inside the box being
+  % built, size of the style the content is set in, size of the call alone,
+  % and size of a scriptscript call of the same command
   \fp_new:N  \l__msz_scale_acc_fp
   \fp_new:N  \l__msz_scale_new_fp
   \fp_new:N  \l__msz_scale_rset_fp
@@ -448,9 +454,8 @@
   \fp_new:N  \l__msz_scale_g_fp
   \fp_set:Nn \l__msz_scale_acc_fp { 1 }
 
-  % sets fp #1 to the size of style #2 relative to the normal (text) style,
-  % measured as a quad ratio. Uses only scratch registers, so the units set
-  % by \__msz_unit:N are left untouched.
+  % sets fp #1 to the size of style #2 relative to the text style (quad
+  % ratio), using only scratch registers so the units stay untouched
   \cs_new_protected:Npn \__msz_rel:NN #1#2
     {
       \hbox_set:Nn \l__msz_unit_box { $ \m@th \textstyle \mkern 18mu $ }
@@ -460,14 +465,11 @@
         { \dim_to_fp:n { \box_wd:N \l__msz_unit_box } / \dim_to_fp:n { \l__msz_scale_quad_dim } }
     }
 
-  % resolves the factor applied to the box (into \l__msz_scale_tl), the
-  % style in which the content is set (into \l__msz_scale_style_tl) and the
-  % geometric scale that holds inside the box (into \l__msz_scale_new_fp) —
-  % #1 factor (blank = option)  #2 option prefix, without msz@
-  % #3 style name (display|text|script|scriptscript)  #4 ambient style
-  % With p the size the call would have alone and g that of a scriptscript
-  % call, the physical size is max(acc * p, min(p, g)): nesting may shrink a
-  % call down to g, never below what p gives on its own.
+  % resolves the factor applied to the box (\l__msz_scale_tl), the style the
+  % content is set in (\l__msz_scale_style_tl) and the scale inside the box
+  % (\l__msz_scale_new_fp) — #1 factor (blank = option)  #2 option prefix
+  % #3 style name  #4 ambient style. Physical size is max(acc*p, min(p, g)):
+  % nesting may shrink a call down to g (scriptscript call), never below p.
   \cs_new_protected:Npn \__msz_scale_set:nnnN #1#2#3#4
     {
       \tl_set:Nx \l__msz_scale_name_tl {#3}
@@ -504,8 +506,8 @@
     }
 
   % one \mathchoice branch — #1 factor (blank = option)  #2 math
-  % #3 option prefix  #4 style name  #5 ambient style. Inside the box the
-  % accumulated scale is the new one, so nested calls see it.
+  % #3 option prefix  #4 style name  #5 ambient style. Nested calls inside
+  % the box see the new accumulated scale.
   \cs_new_protected:Npn \__msz_scale:nnnnN #1#2#3#4#5
     {
       \__msz_scale_set:nnnN {#1} {#3} {#4} #5
@@ -518,6 +520,7 @@
 
   \NewDocumentCommand \zscale { O{} m }
     {
+      \__msz_begin:
       \ensuremath
         {
           \mathord
@@ -529,6 +532,7 @@
                 { \__msz_scale:nnnnN {#1} {#2} { scale } { scriptscript } \scriptscriptstyle }
             }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -536,40 +540,22 @@
 % ==============================================================================
 % \zdot
 % ------------------------------------------------------------------------------
-% Heavier centred dot for vector/tensor dot products, visually distinct from
-% \cdot. Built by scaling \cdot by `zdot-scale-<style>` (one option per math
-% style of the call, so the dot stays proportionate inside exponents), with
-% the meaning selected by `zdot-scale-absolute` (see GLOBAL): true (default)
-% -> a multiple of the normal-size \cdot; false -> a multiple of the ambient
-% \cdot. Inside other scaled boxes the dot is guarded like any scaled
-% call (see "Nesting guard" in GLOBAL). It is then raised by (axis of the
-% ambient style) - (applied factor x axis of the style the dot was set in),
-% which keeps it exactly on the math axis whatever the scale and compensates
-% the baseline drift of \scalebox. Declared \mathbin so surrounding spacing
-% follows binary-operator conventions.
-%
-%   \vec{u} \zdot \vec{v}
+% Heavier \cdot (scaled by `zdot-scale-<style>`), kept on the math axis; \mathbin.
 % ==============================================================================
 
-  \newcommand{\msz@dot@scale@display}{1.8}
-  \newcommand{\msz@dot@scale@text}{1.8}
-  \newcommand{\msz@dot@scale@script}{1.4}
-  \newcommand{\msz@dot@scale@scriptscript}{1}
-  \newcommand{\msz@dot@scale@absolute}{true}
-  \define@key{shorthand}{zdot-scale-display}{\renewcommand{\msz@dot@scale@display}{#1}}
-  \define@key{shorthand}{zdot-scale-text}{\renewcommand{\msz@dot@scale@text}{#1}}
-  \define@key{shorthand}{zdot-scale-script}{\renewcommand{\msz@dot@scale@script}{#1}}
-  \define@key{shorthand}{zdot-scale-scriptscript}{\renewcommand{\msz@dot@scale@scriptscript}{#1}}
-  \define@key{shorthand}{zdot-scale-absolute}{\renewcommand{\msz@dot@scale@absolute}{#1}}
+  \msz@opt{dot}{scale-display}{scale@display}{1.8}
+  \msz@opt{dot}{scale-text}{scale@text}{1.8}
+  \msz@opt{dot}{scale-script}{scale@script}{1.4}
+  \msz@opt{dot}{scale-scriptscript}{scale@scriptscript}{1}
+  \msz@opt{dot}{scale-absolute}{scale@absolute}{true}
 
 \ExplSyntaxOn
 
   \dim_new:N \l__msz_dot_axis_dim
 
-  % one \mathchoice branch — #1 style name (display|text|script|scriptscript)
-  % #2 ambient style. The dot is set directly through the internal scaler
-  % (not \zscale, whose \ensuremath inside \raisebox would fall back to text
-  % style).
+  % one \mathchoice branch — #1 style name  #2 ambient style. Uses the
+  % internal scaler (not \zscale, whose \ensuremath would fall back to text
+  % style inside \raisebox) and raises the dot back onto the axis.
   \cs_new_protected:Npn \__msz_dot:nN #1#2
     {
       \__msz_unit:N #2
@@ -589,6 +575,7 @@
 
   \NewDocumentCommand \zdot { }
     {
+      \__msz_begin:
       \mathbin
         {
           \mathchoice
@@ -597,6 +584,7 @@
             { \__msz_dot:nN { script }       \scriptstyle       }
             { \__msz_dot:nN { scriptscript } \scriptscriptstyle }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -604,39 +592,20 @@
 % ==============================================================================
 % \zarg {expr}
 % ------------------------------------------------------------------------------
-% Typesets a function-argument expression inside parentheses, scaled by
-% `zarg-scale-<style>` (one option per math style of the call, so the
-% parentheses stay proportionate inside exponents), with the meaning selected
-% by `zarg-scale-absolute` (see GLOBAL): true (default) -> a multiple of the
-% normal size; false -> a multiple of the ambient size. A small kern
-% (`zarg-kern`) is inserted before the opening parenthesis, inside the scaled
-% box, to fine-tune the gap after a function name. Nested in other scaled
-% boxes the call is guarded like any scaled call (see "Nesting guard"
-% in GLOBAL). Adds no space of its own: any spacing around it comes from the
-% surrounding source and math atoms alone. The output is one \mathord box,
-% wrapped outside the \mathchoice like \zscale's. Safe in text, inline, and
-% display mode.
-%
-%   f\zarg{x}          f\zarg{x^2 + 1}
+% Parenthesised, scaled argument (`zarg-scale-<style>`) with a kern
+% `zarg-kern` before the opening parenthesis. Output: one \mathord box.
 % ==============================================================================
 
-  \newcommand{\msz@arg@scale@display}{0.9}
-  \newcommand{\msz@arg@scale@text}{0.9}
-  \newcommand{\msz@arg@scale@script}{0.63}
-  \newcommand{\msz@arg@scale@scriptscript}{0.5}
-  \newcommand{\msz@arg@scale@absolute}{true}
-  \newcommand{\msz@arg@kern}{0.5mu}
-  \define@key{shorthand}{zarg-scale-display}{\renewcommand{\msz@arg@scale@display}{#1}}
-  \define@key{shorthand}{zarg-scale-text}{\renewcommand{\msz@arg@scale@text}{#1}}
-  \define@key{shorthand}{zarg-scale-script}{\renewcommand{\msz@arg@scale@script}{#1}}
-  \define@key{shorthand}{zarg-scale-scriptscript}{\renewcommand{\msz@arg@scale@scriptscript}{#1}}
-  \define@key{shorthand}{zarg-scale-absolute}{\renewcommand{\msz@arg@scale@absolute}{#1}}
-  \define@key{shorthand}{zarg-kern}{\renewcommand{\msz@arg@kern}{#1}}
+  \msz@opt{arg}{scale-display}{scale@display}{0.9}
+  \msz@opt{arg}{scale-text}{scale@text}{0.9}
+  \msz@opt{arg}{scale-script}{scale@script}{0.63}
+  \msz@opt{arg}{scale-scriptscript}{scale@scriptscript}{0.5}
+  \msz@opt{arg}{scale-absolute}{scale@absolute}{true}
+  \msz@opt{arg}{kern}{kern}{0.5mu}
 
 \ExplSyntaxOn
 
-  % one \mathchoice branch — #1 expression  #2 style name
-  % (display|text|script|scriptscript)  #3 ambient style
+  % one \mathchoice branch — #1 expression  #2 style name  #3 ambient style
   \cs_new_protected:Npn \__msz_arg:nnN #1#2#3
     {
       \__msz_scale:nnnnN { }
@@ -645,6 +614,7 @@
 
   \NewDocumentCommand \zarg { m }
     {
+      \__msz_begin:
       \ensuremath
         {
           \mathord
@@ -656,6 +626,7 @@
                 { \__msz_arg:nnN {#1} { scriptscript } \scriptscriptstyle }
             }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -663,40 +634,20 @@
 % ==============================================================================
 % \zdiff + s t* [order] {var}
 % ------------------------------------------------------------------------------
-% Differential/derivative operator. No star: differential d^order var, set as
-% a \mathinner atom, so TeX itself supplies the usual thin space against
-% neighbouring Ord atoms in display/text style (none in script styles) and
-% the usual binary/relation spacing elsewhere. The bare command is thus safe
-% as an operand on its own (e.g. inside \frac), after \zarg, and after an
-% operator that brings its own spacing (\zdot): Bin followed by Inner gets
-% the same medium space as Bin followed by Ord, so nothing is doubled.
-% A leading + adds an extra kern on top of that spacing — `zdiff-math-
-% separation` when the call sits in display style, `zdiff-text-separation`
-% in text/script/scriptscript style, chosen automatically via \mathchoice,
-% mirroring \zint's math/text split. One star: derivative d^order/dvar^order
-% as \frac, followed by `zdiff-kern`. Two stars (only meaningful with one
-% star): derivative, as \nicefrac. [order] is the exponent of "d" (and, in
-% the derivative form, of VAR as well); omit it for a first differential/
-% derivative.
-%
-% Like \zint, these options are read at call time, so they may be set or
-% locally overridden with \setkeys{shorthand}{...}.
-%
-%   \zdiff{x}   \zdiff+{x}   \zdiff[2]{x}   \zdiff+[2]{x}
-%   \zdiff*[2]{x}   \zdiff**[2]{x}
+% No star: differential, a \mathinner atom (a leading + adds the kern
+% `zdiff-math-separation` in display style, `zdiff-text-separation` otherwise).
+% One star: derivative as \frac, followed by `zdiff-kern`; two: as \nicefrac.
 % ==============================================================================
 
-  \newcommand{\msz@diff@math@separation}{10mu}
-  \newcommand{\msz@diff@text@separation}{5mu}
-  \newcommand{\msz@diff@kern}{2mu}
-  \define@key{shorthand}{zdiff-math-separation}{\renewcommand{\msz@diff@math@separation}{#1}}
-  \define@key{shorthand}{zdiff-text-separation}{\renewcommand{\msz@diff@text@separation}{#1}}
-  \define@key{shorthand}{zdiff-kern}{\renewcommand{\msz@diff@kern}{#1}}
+  \msz@opt{diff}{math-separation}{math@separation}{10mu}
+  \msz@opt{diff}{text-separation}{text@separation}{5mu}
+  \msz@opt{diff}{kern}{kern}{2mu}
 
 \ExplSyntaxOn
 
   \NewDocumentCommand \zdiff { t+ s t* O{} m }
     {
+      \__msz_begin:
       \ensuremath
         {
           \IfBooleanTF {#2}
@@ -729,6 +680,7 @@
                 }
             }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -736,40 +688,63 @@
 % ==============================================================================
 % \zcond * * * * [expr] {condition}
 % ------------------------------------------------------------------------------
-% "Evaluated at" vertical condition bar. Star count 0-4 selects bar size
-% (auto-scaled / \big| / \Big| / \bigg| / \Bigg|); [expr] is optional
-% content to the left of the bar, wrapped in \left. \right| when present.
-%
-%   \zcond{x=0}                    \zcond[f(x)]{x=0}
-%   \zcond*[\tfrac{df}{dx}]{x=0}
+% Evaluation bar with the condition as a subscript. Stars 0-4 select the bar
+% (auto-sized with \left. \right| around [expr], \big, \Big, \bigg, \Bigg).
+% The condition is scaled by `zcond-scale-<style>` (style of the bar), in the
+% auto-sized case, or in all cases if `zcond-scale-star` is true.
 % ==============================================================================
+
+  \msz@opt{cond}{scale-display}{scale@display}{0.7}
+  \msz@opt{cond}{scale-text}{scale@text}{0.7}
+  \msz@opt{cond}{scale-script}{scale@script}{0.6}
+  \msz@opt{cond}{scale-scriptscript}{scale@scriptscript}{0.6}
+  \msz@opt{cond}{scale-absolute}{scale@absolute}{true}
+  \msz@opt{cond}{scale-star}{scale@star}{false}
 
 \ExplSyntaxOn
 
+  \tl_new:N \l__msz_cond_size_tl
+
+  % one \mathchoice branch — #1 bar size (empty = auto-sized, else big, Big,
+  % bigg, Bigg)  #2 expression  #3 condition  #4 style name of the bar
+  % #5 style of the condition
+  \cs_new_protected:Npn \__msz_cond:nnnnN #1#2#3#4#5
+    {
+      \tl_if_empty:nTF {#1}
+        {
+          \tl_if_blank:nTF {#2}
+            { | }
+            { \left. #2 \right | }
+        }
+        { #2 \use:c {#1} | }
+      \sb
+        {
+          \bool_lazy_or:nnTF
+            { \tl_if_empty_p:n {#1} }
+            { \str_if_eq_p:Vn \msz@cond@scale@star { true } }
+            { \__msz_scale:nnnnN { } {#3} { cond@scale } {#4} #5 }
+            {#3}
+        }
+    }
+  \cs_generate_variant:Nn \__msz_cond:nnnnN { V }
+
   \NewDocumentCommand \zcond { s s s s O{} m }
     {
+      \__msz_begin:
+      \tl_clear:N \l__msz_cond_size_tl
+      \bool_if:nT {#1} { \tl_set:Nn \l__msz_cond_size_tl { big } }
+      \bool_if:nT {#2} { \tl_set:Nn \l__msz_cond_size_tl { Big } }
+      \bool_if:nT {#3} { \tl_set:Nn \l__msz_cond_size_tl { bigg } }
+      \bool_if:nT {#4} { \tl_set:Nn \l__msz_cond_size_tl { Bigg } }
       \ensuremath
         {
-          \bool_if:nTF {#4}
-            { #5 \Bigg | \sb {#6} }
-            {
-              \bool_if:nTF {#3}
-                { #5 \bigg | \sb {#6} }
-                {
-                  \bool_if:nTF {#2}
-                    { #5 \Big | \sb {#6} }
-                    {
-                      \bool_if:nTF {#1}
-                        { #5 \big | \sb {#6} }
-                        {
-                          \tl_if_blank:nTF {#5}
-                            { | \sb { \zscale{#6} } }
-                            { \left. #5 \right | \sb { \zscale{#6} } }
-                        }
-                    }
-                }
-            }
+          \mathchoice
+            { \__msz_cond:VnnnN \l__msz_cond_size_tl {#5} {#6} { display }      \scriptstyle       }
+            { \__msz_cond:VnnnN \l__msz_cond_size_tl {#5} {#6} { text }         \scriptstyle       }
+            { \__msz_cond:VnnnN \l__msz_cond_size_tl {#5} {#6} { script }       \scriptscriptstyle }
+            { \__msz_cond:VnnnN \l__msz_cond_size_tl {#5} {#6} { scriptscript } \scriptscriptstyle }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -777,147 +752,71 @@
 % ==============================================================================
 % \zscript + *[ll] *[ul] {nucleus} *[lr] *[ur]
 % ------------------------------------------------------------------------------
-% Attaches up to four scripts to a nucleus: leading (pre-indexed) subscript
-% LL and superscript UL, and trailing subscript LR and superscript UR.
-% Omitting an argument suppresses it. Safe in text, inline, and display mode.
-%
-% Every script is wrapped in the macro `zscript-wrapper` when it is stored. The
-% option is mode-free and takes any macro accepting one argument, but three
-% settings are recommended, each with its own caveats:
-%   \symup  (default) math letters, Greek letters, digits and signs are typed
-%           as they are and set upright; a variable needs \symit{...}, and a
-%           label with spaces or hyphens needs \text{...}.
-%   \text   labels are typed as they are; a variable, Greek letter or sign
-%           needs $...$.
-%   (empty) scripts are set in the ambient math alphabet, as plain TeX would;
-%           a label needs \text{...}.
-% The nucleus is never wrapped.
-%
-% The switch `zscript-adaptative` (true | false, default true; any value other
-% than `true` counts as false) selects how scripts are placed. True: from the
-% edges of the nucleus, as described below. False: by TeX itself, as if typed
-% {}_{LL}^{UL} {nucleus}_{LR}^{UR}, i.e. hanging from the baseline by font
-% parameters (the traditional placement). A large operator then still takes
-% its scripts at the sides in every style (like \nolimits), and no space is
-% added between leading scripts and the nucleus. The position and frame
-% options are ignored; the wrapper and the star scaling still apply.
-%
-% A leading + flips the switch for this call alone, whatever its value: with
-% `zscript-adaptative` true the call is placed by TeX, with it false the call
-% is placed from the edges of the nucleus. The + must directly follow the
-% command name; a nucleus that is a lone + must be braced, {+}.
-%
-% When adaptative, scripts are boxes placed explicitly, never by TeX's script
-% machinery, so they are free to overlap the nucleus. An unstarred script is
-% set one style smaller than the nucleus. A star before a script additionally
-% scales it by `zscript-scale-<style>`, where <style> (display, text, script,
-% scriptscript) is the style of the NUCLEUS; the same four factors apply to
-% all four scripts. The switch `zscript-scale-absolute` (see GLOBAL) selects
-% the meaning: true (default) -> normal size x factor; false -> unstarred
-% script size x factor. The defaults are absolute factors derived as in
-% "Choosing the factors" in GLOBAL. A starred script is guarded against
-% shrinking below the scriptscript size when nested in other scaled
-% boxes (see "Nesting guard" in GLOBAL); unstarred scripts are floored by TeX
-% itself.
-%
-% Every position is measured from the EDGES of the nucleus to the NEAREST
-% edge of the script, as a dimensionless RATIO of a unit measured in the
-% style of the nucleus (see GLOBAL): vertical options (v, above, below) are
-% ratios of its x-height, horizontal ones (h, before, after) of its quad. A
-% setting therefore suits nuclei and scripts of any size and keeps the same
-% look inside exponents.
-%
-% Option names: zscript-<mode>-<script>-<axis>, with
-%   mode    math (display style) | text (text, script and scriptscript style)
-%   script  ul | ur | ll | lr
-%   axis    v (vertical) | h (horizontal)
-% and zscript-<mode>-<before|after|above|below> for the frame. Every key
-% exists for both modes. The scales zscript-scale-<style>, the switches
-% zscript-scale-absolute and zscript-adaptative, and the wrapper
-% zscript-wrapper are mode-free.
-%
-% Coordinates: x positive to the right, y positive upward.
-%   ur, ul  v = y of the script's BOTTOM edge, from the nucleus TOP edge.
-%   lr, ll  v = y of the script's TOP edge, from the nucleus BOTTOM edge.
-%   ur, lr  h = x of the script's LEFT edge, from the nucleus RIGHT edge.
-%   ul, ll  h = x of the script's RIGHT edge, from the nucleus LEFT edge
-%           (negative moves the script further left).
-%
-% The whole output is one \mathord box whose height and depth cover the
-% nucleus and all scripts, plus `above`/`below`, and whose width covers the
-% same plus `before`/`after` (all signed and additive), so neighbouring lines
-% are pushed apart and a following script or \left/\right sees its true
-% height. The box is wrapped in \mathord OUTSIDE the \mathchoice: a script
-% after a bare \mathchoice would otherwise attach to an empty atom.
-%
-%   \zscript[i][2]{A}                  % trailing sub/sup, unscaled
-%   \zscript*[I]*[K]{M}*[J]*[L]        % all four scripts, scaled
-%   \zscript[\mu][\symit{p}]{R}[\text{pre-ion}][-1]   % one of each kind
-%   \zscript+{k}[T]                    % this call only: the opposite placement
-%   {\setkeys{shorthand}{zscript-adaptative=false} \zscript{k}[T]}   % TeX's own
+% Up to four scripts around a nucleus, wrapped in `zscript-wrapper`. With
+% `zscript-adaptative` true they are boxes placed from the edges of the
+% REFERENCE (the nucleus, or the expression in `zscript-reference`), centred
+% on which the printed nucleus is set; false: placed by TeX. A leading +
+% flips the switch for one call, after the keys of an alias are applied.
+% Starred scripts are scaled by `zscript-scale-<style of the nucleus>`.
+% Output: one \mathord box covering the printed nucleus and all scripts.
 % ==============================================================================
 
-  % \msz@script@opt {key suffix} {macro suffix} {default} — declares the
-  % option macro \msz@script@<macro suffix> and its key zscript-<key suffix>
-  \newcommand{\msz@script@opt}[3]{%
-    \expandafter\newcommand\csname msz@script@#2\endcsname{#3}%
-    \define@key{shorthand}{zscript-#1}{\expandafter\renewcommand\csname msz@script@#2\endcsname{##1}}%
-  }
+  \msz@opt{script}{math-before}{math@before}{0}
+  \msz@opt{script}{math-after}{math@after}{0.05}
+  \msz@opt{script}{math-above}{math@above}{0.2}
+  \msz@opt{script}{math-below}{math@below}{0.1}
 
-  \msz@script@opt{math-before}{math@before}{0}
-  \msz@script@opt{math-after}{math@after}{0.05}
-  \msz@script@opt{math-above}{math@above}{0.2}
-  \msz@script@opt{math-below}{math@below}{0.1}
+  \msz@opt{script}{math-ul-v}{math@ul@v}{-0.3}
+  \msz@opt{script}{math-ul-h}{math@ul@h}{0.05}
+  \msz@opt{script}{math-ur-v}{math@ur@v}{-0.3}
+  \msz@opt{script}{math-ur-h}{math@ur@h}{0.05}
+  \msz@opt{script}{math-ll-v}{math@ll@v}{0.3}
+  \msz@opt{script}{math-ll-h}{math@ll@h}{-0.05}
+  \msz@opt{script}{math-lr-v}{math@lr@v}{0.3}
+  \msz@opt{script}{math-lr-h}{math@lr@h}{0}
 
-  \msz@script@opt{math-ul-v}{math@ul@v}{-0.3}
-  \msz@script@opt{math-ul-h}{math@ul@h}{0.05}
-  \msz@script@opt{math-ur-v}{math@ur@v}{-0.3}
-  \msz@script@opt{math-ur-h}{math@ur@h}{0.05}
-  \msz@script@opt{math-ll-v}{math@ll@v}{0.3}
-  \msz@script@opt{math-ll-h}{math@ll@h}{-0.05}
-  \msz@script@opt{math-lr-v}{math@lr@v}{0.3}
-  \msz@script@opt{math-lr-h}{math@lr@h}{0}
+  \msz@opt{script}{text-before}{text@before}{0}
+  \msz@opt{script}{text-after}{text@after}{0.05}
+  \msz@opt{script}{text-above}{text@above}{0.2}
+  \msz@opt{script}{text-below}{text@below}{0.1}
 
-  \msz@script@opt{text-before}{text@before}{0}
-  \msz@script@opt{text-after}{text@after}{0.05}
-  \msz@script@opt{text-above}{text@above}{0.2}
-  \msz@script@opt{text-below}{text@below}{0.1}
+  \msz@opt{script}{text-ul-v}{text@ul@v}{-0.3}
+  \msz@opt{script}{text-ul-h}{text@ul@h}{0.05}
+  \msz@opt{script}{text-ur-v}{text@ur@v}{-0.3}
+  \msz@opt{script}{text-ur-h}{text@ur@h}{0.05}
+  \msz@opt{script}{text-ll-v}{text@ll@v}{0.3}
+  \msz@opt{script}{text-ll-h}{text@ll@h}{-0.05}
+  \msz@opt{script}{text-lr-v}{text@lr@v}{0.3}
+  \msz@opt{script}{text-lr-h}{text@lr@h}{0}
 
-  \msz@script@opt{text-ul-v}{text@ul@v}{-0.3}
-  \msz@script@opt{text-ul-h}{text@ul@h}{0.05}
-  \msz@script@opt{text-ur-v}{text@ur@v}{-0.3}
-  \msz@script@opt{text-ur-h}{text@ur@h}{0.05}
-  \msz@script@opt{text-ll-v}{text@ll@v}{0.3}
-  \msz@script@opt{text-ll-h}{text@ll@h}{-0.05}
-  \msz@script@opt{text-lr-v}{text@lr@v}{0.3}
-  \msz@script@opt{text-lr-h}{text@lr@h}{0}
-
-  \msz@script@opt{scale-display}{scale@display}{0.6}
-  \msz@script@opt{scale-text}{scale@text}{0.6}
-  \msz@script@opt{scale-script}{scale@script}{0.55}
-  \msz@script@opt{scale-scriptscript}{scale@scriptscript}{0.5}
-  \msz@script@opt{scale-absolute}{scale@absolute}{true}
-  \msz@script@opt{wrapper}{wrapper}{\symup}
-  \msz@script@opt{adaptative}{adaptative}{true}
+  \msz@opt{script}{scale-display}{scale@display}{0.6}
+  \msz@opt{script}{scale-text}{scale@text}{0.6}
+  \msz@opt{script}{scale-script}{scale@script}{0.55}
+  \msz@opt{script}{scale-scriptscript}{scale@scriptscript}{0.5}
+  \msz@opt{script}{scale-absolute}{scale@absolute}{true}
+  \msz@opt{script}{wrapper}{wrapper}{\symup}
+  \msz@opt{script}{adaptative}{adaptative}{true}
+  \msz@opt{script}{reference}{reference}{}
 
 \ExplSyntaxOn
 
   \tl_new:N  \l__msz_script_mode_tl
   \tl_new:N  \l__msz_script_ctx_tl
 
+  \dim_new:N \l__msz_script_off_dim
   \dim_new:N \l__msz_script_left_dim
   \dim_new:N \l__msz_script_right_dim
 
   \box_new:N \l__msz_script_nuc_box
+  \box_new:N \l__msz_script_ref_box
   \box_new:N \l__msz_script_out_box
 
-  % whether the current call is placed from the edges of the nucleus (true)
-  % or by TeX (false); set by \zscript from zscript-adaptative and its +
+  % placement of the current call (true: from edges) and the + of the call
   \bool_new:N \l__msz_script_adaptative_bool
+  \bool_new:N \l__msz_script_plus_bool
 
-  % per-script storage for each key in {ll, ul, lr, ur}: its token list (empty
-  % = absent), its star flag, its box, the x of its left edge from the
-  % nucleus' left edge, and the raise of its baseline
+  % per-script storage for ll, ul, lr, ur: token list (empty = absent), star
+  % flag, box, x of its left edge from the reference's left edge, raise
   \clist_map_inline:nn { ll, ul, lr, ur }
     {
       \tl_new:c   { l__msz_script_ #1 _tl }
@@ -931,8 +830,7 @@
   \cs_new:Npn \__msz_script_opt:n #1
     { \use:c { msz@script@ \l__msz_script_mode_tl @ #1 } }
 
-  % stores script #3 and its star flag #2 under key #1, wrapped in the macro
-  % zscript-wrapper (none if empty), expanded now; blank = absent
+  % stores script #3 with star flag #2 under key #1, wrapped in the wrapper
   \cs_new_protected:Npn \__msz_script_store:nnn #1#2#3
     {
       \tl_clear:c { l__msz_script_ #1 _tl }
@@ -944,9 +842,7 @@
         }
     }
 
-  % the content of script #1 (to be used in math mode) for scripts of style
-  % #2 — starred: a box scaled by zscript-scale-<style of the nucleus> (see
-  % the header for what the factor multiplies); unstarred: the content itself
+  % content of script #1 in style #2: a scaled box if starred, else itself
   \cs_new_protected:Npn \__msz_script_content:nN #1#2
     {
       \bool_if:cTF { l__msz_script_ #1 _star_bool }
@@ -957,10 +853,9 @@
         { \tl_use:c { l__msz_script_ #1 _tl } }
     }
 
-  % typesets script #1 (if present) in style #4 and computes its position:
-  % #2 "top"|"bottom" (which nucleus edge it hangs from), #3
-  % "leading"|"trailing" (which side); then widens the left/right overhangs to
-  % contain it
+  % typesets script #1 in style #4 and computes its position from the
+  % reference — #2 "top"|"bottom" edge it hangs from  #3 "leading"|"trailing"
+  % — then widens the left/right overhangs to contain it
   \cs_new_protected:Npn \__msz_script_place:nnnN #1#2#3#4
     {
       \tl_if_empty:cF { l__msz_script_ #1 _tl }
@@ -971,12 +866,12 @@
             {
               \str_if_eq:nnTF {#2} { top }
                 {
-                  \box_ht:N \l__msz_script_nuc_box
+                  \box_ht:N \l__msz_script_ref_box
                   + \__msz_ratio:nN { \__msz_script_opt:n { #1 @v } } \l__msz_unit_v_dim
                   + \box_dp:c { l__msz_script_ #1 _box }
                 }
                 {
-                  - \box_dp:N \l__msz_script_nuc_box
+                  - \box_dp:N \l__msz_script_ref_box
                   + \__msz_ratio:nN { \__msz_script_opt:n { #1 @v } } \l__msz_unit_v_dim
                   - \box_ht:c { l__msz_script_ #1 _box }
                 }
@@ -989,7 +884,7 @@
                   - \box_wd:c { l__msz_script_ #1 _box }
                 }
                 {
-                  \box_wd:N \l__msz_script_nuc_box
+                  \box_wd:N \l__msz_script_ref_box
                   + \__msz_ratio:nN { \__msz_script_opt:n { #1 @h } } \l__msz_unit_h_dim
                 }
             }
@@ -1000,13 +895,13 @@
               \dim_max:nn { \l__msz_script_right_dim }
                 {
                   \dim_use:c { l__msz_script_ #1 _x_dim } + \box_wd:c { l__msz_script_ #1 _box }
-                  - \box_wd:N \l__msz_script_nuc_box
+                  - \box_wd:N \l__msz_script_ref_box
                 }
             }
         }
     }
 
-  % places script #1 (if present) at its computed position without taking width
+  % places script #1 (if present) at its position without taking width
   \cs_new_protected:Npn \__msz_script_emit:n #1
     {
       \tl_if_empty:cF { l__msz_script_ #1 _tl }
@@ -1020,16 +915,24 @@
         }
     }
 
-  % builds the whole output of the adaptative placement (one \mathchoice
-  % branch), reading the scripts already stored by \zscript — #1 nucleus
-  % #2 "math"|"text"  #3 style of the nucleus  #4 style of the scripts
+  % adaptative placement (one \mathchoice branch) — #1 nucleus
+  % #2 "math"|"text"  #3 style of the nucleus  #4 style of the scripts.
+  % The reference box is the nucleus unless zscript-reference is given; the
+  % printed nucleus is centred on it (off = half the width difference) and
+  % the overhangs start from the part of either that sticks out of the other.
   \cs_new_protected:Npn \__msz_script_adaptative:nnNN #1#2#3#4
     {
       \tl_set:Nn \l__msz_script_mode_tl {#2}
       \__msz_unit:N #3
       \hbox_set:Nn \l__msz_script_nuc_box { $ \m@th #3 #1 $ }
-      \dim_zero:N \l__msz_script_left_dim
-      \dim_zero:N \l__msz_script_right_dim
+      \tl_if_blank:VTF \msz@script@reference
+        { \box_set_eq:NN \l__msz_script_ref_box \l__msz_script_nuc_box }
+        { \hbox_set:Nn \l__msz_script_ref_box { $ \m@th #3 \msz@script@reference $ } }
+      \dim_set:Nn \l__msz_script_off_dim
+        { ( \box_wd:N \l__msz_script_ref_box - \box_wd:N \l__msz_script_nuc_box ) / 2 }
+      \dim_set:Nn \l__msz_script_left_dim
+        { \dim_max:nn { 0pt } { - \l__msz_script_off_dim } }
+      \dim_set_eq:NN \l__msz_script_right_dim \l__msz_script_left_dim
       \__msz_script_place:nnnN { ll } { bottom } { leading }  #4
       \__msz_script_place:nnnN { ul } { top }    { leading }  #4
       \__msz_script_place:nnnN { lr } { bottom } { trailing } #4
@@ -1042,7 +945,9 @@
           \__msz_script_emit:n { ul }
           \__msz_script_emit:n { lr }
           \__msz_script_emit:n { ur }
+          \kern \l__msz_script_off_dim
           \box_use:N \l__msz_script_nuc_box
+          \kern \l__msz_script_off_dim
           \kern \l__msz_script_right_dim
           \kern \__msz_ratio:nN { \__msz_script_opt:n { after } } \l__msz_unit_h_dim
         }
@@ -1059,9 +964,8 @@
       \box_use:N \l__msz_script_out_box
     }
 
-  % attaches to the atom just before it the subscript (key #1) and the
-  % superscript (key #2), when present, with TeX's own placement — #3 style
-  % of the scripts
+  % attaches subscript #1 and superscript #2 (when present) to the atom just
+  % before, with TeX's own placement — #3 style of the scripts
   \cs_new_protected:Npn \__msz_script_attach:nnN #1#2#3
     {
       \tl_if_empty:cF { l__msz_script_ #1 _tl }
@@ -1070,11 +974,10 @@
         { \sp { \__msz_script_content:nN {#2} #3 } }
     }
 
-  % builds the whole output of the traditional placement (one \mathchoice
-  % branch), leaving every position to TeX — #1 nucleus  #2 style of the
-  % scripts. The leading scripts hang from an empty atom and the nucleus is
-  % an \mathord: TeX adds no space between the two, and a large operator
-  % takes its scripts at the sides instead of above and below.
+  % traditional placement (one \mathchoice branch) — #1 nucleus  #2 style of
+  % the scripts. Leading scripts hang from an empty atom and the nucleus is an
+  % \mathord, so no space is added and large operators keep their scripts at
+  % the sides.
   \cs_new_protected:Npn \__msz_script_tex:nN #1#2
     {
       { }
@@ -1083,12 +986,9 @@
       \__msz_script_attach:nnN { lr } { ur } #2
     }
 
-  % builds the whole output (one \mathchoice branch), reading the scripts
-  % already stored by \zscript, in the placement selected into
-  % \l__msz_script_adaptative_bool by \zscript itself —
-  % #1 nucleus  #2 "math"|"text"
-  % #3 style name of the nucleus (display|text|script|scriptscript)
-  % #4 style of the nucleus  #5 style of the scripts
+  % one \mathchoice branch, in the placement selected by the call — #1 nucleus
+  % #2 "math"|"text"  #3 style name of the nucleus  #4 style of the nucleus
+  % #5 style of the scripts
   \cs_new_protected:Npn \__msz_script_build:nnnNN #1#2#3#4#5
     {
       \tl_set:Nn \l__msz_script_ctx_tl {#3}
@@ -1097,11 +997,18 @@
         { \__msz_script_tex:nN {#1} #5 }
     }
 
-  % parses the nine o/s/m arguments of \zscript, stores the scripts and
-  % builds the output, in the placement already selected by \zscript. The
-  % arguments live here, not in \zscript, so that the + fits beside them
+  % parses the nine arguments, opens the call (applying the keys of an alias),
+  % selects the placement (adaptative XOR the + of the call), stores the
+  % scripts and builds the output. Kept apart from \zscript so the + fits.
   \NewDocumentCommand \__msz_script_main { s O{} s O{} m s O{} s O{} }
     {
+      \__msz_begin:
+      \bool_set:Nn \l__msz_script_adaptative_bool
+        {
+          \bool_xor_p:nn
+            { \str_if_eq_p:Vn \msz@script@adaptative { true } }
+            { \bool_if_p:N \l__msz_script_plus_bool }
+        }
       \__msz_script_store:nnn { ll } {#1} {#2}
       \__msz_script_store:nnn { ul } {#3} {#4}
       \__msz_script_store:nnn { lr } {#6} {#7}
@@ -1117,14 +1024,13 @@
                 { \__msz_script_build:nnnNN {#5} { text } { scriptscript } \scriptscriptstyle \scriptscriptstyle }
             }
         }
+      \group_end:
     }
 
-  % the placement is adaptative when zscript-adaptative is true XOR the call
-  % carries a +; set on every call, so nothing leaks between calls
+  % keeps the + of the call; set on every call so nothing leaks
   \NewDocumentCommand \zscript { t+ }
     {
-      \bool_set:Nn \l__msz_script_adaptative_bool
-        { \bool_xor_p:nn { \str_if_eq_p:Vn \msz@script@adaptative { true } } {#1} }
+      \bool_set:Nn \l__msz_script_plus_bool {#1}
       \__msz_script_main
     }
 
@@ -1133,87 +1039,38 @@
 % ==============================================================================
 % \zprime * [n] [v] [h] {symbol}
 % ------------------------------------------------------------------------------
-% Adorns SYMBOL with N prime marks (default 1). Unstarred draws them flush to
-% the symbol's right edge, like a superscript; starred draws them as a
-% centred accent above the symbol. The whole cluster (primes and the kerns
-% between them) is scaled once by `zprime-scale-<style>`, one option per math
-% style of the SYMBOL, so \zprime nests safely inside exponents etc. The
-% switch `zprime-scale-absolute` (see GLOBAL) selects the meaning: true
-% (default) -> a multiple of the normal-size primes; false -> a multiple of
-% the ambient ones. Nested in other scaled boxes the cluster is guarded
-% like any scaled call (see "Nesting guard" in GLOBAL).
-%
-% The prime cluster is a box placed explicitly, free to overlap the symbol.
-% Every position is measured from the EDGES of the symbol to the NEAREST edge
-% of the cluster, as a dimensionless RATIO of a unit measured in the style of
-% the symbol (see GLOBAL): vertical options (v, above, below) are ratios of
-% its x-height, horizontal ones (h, before, after) of its quad. The same
-% number therefore looks identical at any math style or scale, and in
-% exponents (same philosophy as \zscript).
-%
-% Option names: zprime-<mode>-<form>-<axis>, with
-%   mode   math (display style) | text (text, script and scriptscript style)
-%   form   script (unstarred) | accent (starred)
-%   axis   v (vertical) | h (horizontal)
-% and zprime-<mode>-<before|after|above|below> for the frame. Every key
-% exists for both modes. `zprime-separation` (a mu-kern between consecutive
-% primes, scaled with them; a very fine unit: use a few mu), the scales
-% zprime-scale-<style> and the switch zprime-scale-absolute are mode-free.
-%
-% Coordinates: x positive to the right, y positive upward.
-%   v  = y of the cluster's BOTTOM edge, from the symbol's TOP edge
-%        (negative lowers the primes into the symbol).
-%   h  = script: x of the cluster's LEFT edge, from the symbol's RIGHT edge;
-%        accent: shift of the cluster from its centred position.
-% V and H, when given, REPLACE (not nudge) the package option of the chosen
-% form and mode for this call only; leave empty ([]) to keep it. Both are
-% plain ratios, \eg [-0.5] or [0.1].
-%
-% The whole output is one \mathord box whose height and depth cover the
-% symbol AND the cluster, plus `above`/`below`, and whose width covers the
-% same plus `before`/`after` (all signed and additive), exactly as in
-% \zscript. The box is wrapped in \mathord OUTSIDE the \mathchoice: a script
-% attached afterwards (e.g. \zprime*[3]{\int}^{\infty}) or a \left/\right
-% would otherwise see an empty atom instead of the box's true height.
-%
-%   \zprime{f}          \zprime*{f}
-%   \zprime[2]{g}       \zprime*[2]{g}
-%   \zprime*[1][][-0.1]{\int^{\infty}}   % h override, default v
+% [n] primes (default 1) as a superscript (no star) or a centred accent (star).
+% [v] and [h] replace the option of the form and mode for this call. The
+% cluster is scaled by `zprime-scale-<style of the symbol>`. Output: one
+% \mathord box covering symbol and cluster.
 % ==============================================================================
 
-  % \msz@prime@opt {key suffix} {macro suffix} {default} — declares the
-  % option macro \msz@prime@<macro suffix> and its key zprime-<key suffix>
-  \newcommand{\msz@prime@opt}[3]{%
-    \expandafter\newcommand\csname msz@prime@#2\endcsname{#3}%
-    \define@key{shorthand}{zprime-#1}{\expandafter\renewcommand\csname msz@prime@#2\endcsname{##1}}%
-  }
+  \msz@opt{prime}{separation}{sep}{-2mu}
+  \msz@opt{prime}{scale-display}{scale@display}{1.1}
+  \msz@opt{prime}{scale-text}{scale@text}{1.1}
+  \msz@opt{prime}{scale-script}{scale@script}{0.8}
+  \msz@opt{prime}{scale-scriptscript}{scale@scriptscript}{0.8}
+  \msz@opt{prime}{scale-absolute}{scale@absolute}{true}
 
-  \msz@prime@opt{separation}{sep}{-2mu}
-  \msz@prime@opt{scale-display}{scale@display}{1.1}
-  \msz@prime@opt{scale-text}{scale@text}{1.1}
-  \msz@prime@opt{scale-script}{scale@script}{0.8}
-  \msz@prime@opt{scale-scriptscript}{scale@scriptscript}{0.8}
-  \msz@prime@opt{scale-absolute}{scale@absolute}{true}
+  \msz@opt{prime}{math-before}{math@before}{0}
+  \msz@opt{prime}{math-after}{math@after}{0}
+  \msz@opt{prime}{math-above}{math@above}{0.1}
+  \msz@opt{prime}{math-below}{math@below}{0.1}
 
-  \msz@prime@opt{math-before}{math@before}{0}
-  \msz@prime@opt{math-after}{math@after}{0}
-  \msz@prime@opt{math-above}{math@above}{0.1}
-  \msz@prime@opt{math-below}{math@below}{0.1}
+  \msz@opt{prime}{math-script-v}{math@script@v}{-1.3}
+  \msz@opt{prime}{math-script-h}{math@script@h}{-0.02}
+  \msz@opt{prime}{math-accent-v}{math@accent@v}{-0.8}
+  \msz@opt{prime}{math-accent-h}{math@accent@h}{0.1}
 
-  \msz@prime@opt{math-script-v}{math@script@v}{-1.3}
-  \msz@prime@opt{math-script-h}{math@script@h}{-0.02}
-  \msz@prime@opt{math-accent-v}{math@accent@v}{-0.8}
-  \msz@prime@opt{math-accent-h}{math@accent@h}{0.1}
+  \msz@opt{prime}{text-before}{text@before}{0}
+  \msz@opt{prime}{text-after}{text@after}{0}
+  \msz@opt{prime}{text-above}{text@above}{0.1}
+  \msz@opt{prime}{text-below}{text@below}{0.1}
 
-  \msz@prime@opt{text-before}{text@before}{0}
-  \msz@prime@opt{text-after}{text@after}{0}
-  \msz@prime@opt{text-above}{text@above}{0.1}
-  \msz@prime@opt{text-below}{text@below}{0.1}
-
-  \msz@prime@opt{text-script-v}{text@script@v}{-1.3}
-  \msz@prime@opt{text-script-h}{text@script@h}{-0.02}
-  \msz@prime@opt{text-accent-v}{text@accent@v}{-0.8}
-  \msz@prime@opt{text-accent-h}{text@accent@h}{0.1}
+  \msz@opt{prime}{text-script-v}{text@script@v}{-1.3}
+  \msz@opt{prime}{text-script-h}{text@script@h}{-0.02}
+  \msz@opt{prime}{text-accent-v}{text@accent@v}{-0.8}
+  \msz@opt{prime}{text-accent-h}{text@accent@h}{0.1}
 
 \ExplSyntaxOn
 
@@ -1238,8 +1095,7 @@
   \cs_new:Npn \__msz_prime_opt:n #1
     { \use:c { msz@prime@ \l__msz_prime_mode_tl @ #1 } }
 
-  % #1 primes, separated by zprime-separation. Unscaled: the whole cluster
-  % is scaled afterwards, kerns included.
+  % #1 primes separated by zprime-separation; unscaled, the cluster is scaled whole
   \cs_new_protected:Npn \__msz_prime_make:n #1
     {
       \int_step_inline:nn {#1}
@@ -1250,10 +1106,8 @@
         }
     }
 
-  % computes the cluster's position for the current mode and form — its
-  % baseline raise (dim y) and the x of its left edge from the symbol's left
-  % edge (dim x) — then the left/right overhangs that contain it. An empty
-  % #1 (v) or #2 (h) keeps the package option; anything else REPLACES it.
+  % computes the cluster's raise (y) and left-edge x from the symbol's left
+  % edge, and the overhangs; non-empty #1 (v) or #2 (h) REPLACES the option
   \cs_new_protected:Npn \__msz_prime_place:nn #1#2
     {
       \tl_set:Nx \l__msz_prime_vratio_tl { \__msz_prime_opt:n { \l__msz_prime_form_tl @v } }
@@ -1288,14 +1142,9 @@
         }
     }
 
-  % builds the whole output (one \mathchoice branch) —
-  % #1 star-bool  #2 n (may be empty -> 1)  #3 v override (empty = option)
-  % #4 h override (empty = option)  #5 symbol  #6 "math"|"text"
-  % #7 style name of the symbol (display|text|script|scriptscript)
-  % #8 style of the symbol and the primes
-  % The output box is used bare: \zprime wraps it in \mathord OUTSIDE the
-  % \mathchoice, so a script or \left/\right attached afterwards sees its
-  % true height instead of an empty atom.
+  % whole output (one \mathchoice branch), used bare: \zprime wraps it in
+  % \mathord outside the \mathchoice — #1 star  #2 n  #3 v  #4 h  #5 symbol
+  % #6 "math"|"text"  #7 style name of the symbol  #8 style of symbol and primes
   \cs_new_protected:Npn \__msz_prime_build:nnnnnnnN #1#2#3#4#5#6#7#8
     {
       \tl_set:Nn \l__msz_prime_mode_tl {#6}
@@ -1340,6 +1189,7 @@
 
   \NewDocumentCommand \zprime { s O{1} O{} O{} m }
     {
+      \__msz_begin:
       \ensuremath
         {
           \mathord
@@ -1351,6 +1201,7 @@
                 { \__msz_prime_build:nnnnnnnN {#1}{#2}{#3}{#4}{#5} { text } { scriptscript } \scriptscriptstyle }
             }
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -1358,90 +1209,37 @@
 % ==============================================================================
 % \zlim + * {var} * {limit}
 % ------------------------------------------------------------------------------
-% Limit operator: "lim" with the script `var \to limit`. Without the plus the
-% script is centred BELOW the operator in every style, as \lim\limits_{...}
-% would in display; with a leading + it hangs to the LOWER RIGHT of the
-% operator, as a subscript (\lim\nolimits_{...}). One-sided limits are
-% written in {limit} itself, e.g. {0^+}. Safe in text, inline, and display
-% mode.
-%
-% The script is a box set one style below that of the operator and placed
-% explicitly, never by TeX's limits machinery, so every style shares one
-% geometry and the script is free to overlap the operator. A star before
-% {var} or {limit} additionally scales that part, as a box inside the
-% script, by `zlim-scale-<style>`, where <style> (display, text, script,
-% scriptscript) is the style of the OPERATOR; the same four factors apply to
-% both parts. The switch `zlim-scale-absolute` (see GLOBAL) selects the
-% meaning: true (default) -> normal size x factor; false -> unstarred script
-% size x factor. The defaults are absolute factors derived as in "Choosing
-% the factors" in GLOBAL. A starred part is guarded against shrinking below
-% the scriptscript size when nested in other scaled boxes (see
-% "Nesting guard" in GLOBAL); unstarred parts are floored by TeX itself.
-%
-% Every position is measured from the EDGES of the operator to the NEAREST
-% edge of the script, as a dimensionless RATIO of a unit measured in the
-% style of the operator (see GLOBAL): vertical options (v, above, below) are
-% ratios of its x-height, horizontal ones (h, before, after) of its quad.
-%
-% Option names: zlim-<mode>-<form>-<axis>, with
-%   mode   math (display style) | text (text, script and scriptscript style)
-%   form   below (unstarred by +) | script (with +)
-%   axis   v (vertical) | h (horizontal)
-% and zlim-<mode>-<before|after|above|below> for the frame. Every key
-% exists for both modes. The scales zlim-scale-<style> and the switch
-% zlim-scale-absolute are mode-free.
-%
-% Coordinates: x positive to the right, y positive upward.
-%   v  = y of the script's TOP edge, from the operator's BOTTOM edge
-%        (negative lowers the script below the operator).
-%   h  = below: shift of the script from its centred position;
-%        script: x of the script's LEFT edge, from the operator's RIGHT edge.
-%
-% The whole output is one \mathop box (followed by \nolimits, so TeX keeps
-% the usual space after an operator) whose height and depth cover the
-% operator and the script, plus `above`/`below`, and whose width covers the
-% same plus `before`/`after` (all signed and additive, as in \zscript), so
-% neighbouring lines are pushed apart. A negative `after` removes part of
-% the space left after the operator, pulling the following term (e.g. a
-% derivative) closer. The box is wrapped in \mathop OUTSIDE the \mathchoice,
-% so a script or \left/\right attached afterwards sees its true height.
-%
-%   \zlim{x}{0}              \zlim+{x}{0}
-%   \zlim*{x}*{0^+}          \zlim+*{n}{\infty}
+% "lim" with the script `var \to limit`, centred below the operator, or at
+% its lower right with a leading +. A star scales that part by
+% `zlim-scale-<style of the operator>`. Output: one \mathop box (followed by
+% \nolimits) covering operator and script.
 % ==============================================================================
 
-  % \msz@lim@opt {key suffix} {macro suffix} {default} — declares the
-  % option macro \msz@lim@<macro suffix> and its key zlim-<key suffix>
-  \newcommand{\msz@lim@opt}[3]{%
-    \expandafter\newcommand\csname msz@lim@#2\endcsname{#3}%
-    \define@key{shorthand}{zlim-#1}{\expandafter\renewcommand\csname msz@lim@#2\endcsname{##1}}%
-  }
+  \msz@opt{lim}{scale-display}{scale@display}{0.6}
+  \msz@opt{lim}{scale-text}{scale@text}{0.6}
+  \msz@opt{lim}{scale-script}{scale@script}{0.43}
+  \msz@opt{lim}{scale-scriptscript}{scale@scriptscript}{0.43}
+  \msz@opt{lim}{scale-absolute}{scale@absolute}{true}
 
-  \msz@lim@opt{scale-display}{scale@display}{0.6}
-  \msz@lim@opt{scale-text}{scale@text}{0.6}
-  \msz@lim@opt{scale-script}{scale@script}{0.43}
-  \msz@lim@opt{scale-scriptscript}{scale@scriptscript}{0.43}
-  \msz@lim@opt{scale-absolute}{scale@absolute}{true}
+  \msz@opt{lim}{math-before}{math@before}{0}
+  \msz@opt{lim}{math-after}{math@after}{0}
+  \msz@opt{lim}{math-above}{math@above}{0}
+  \msz@opt{lim}{math-below}{math@below}{0}
 
-  \msz@lim@opt{math-before}{math@before}{0}
-  \msz@lim@opt{math-after}{math@after}{0}
-  \msz@lim@opt{math-above}{math@above}{0}
-  \msz@lim@opt{math-below}{math@below}{0}
+  \msz@opt{lim}{math-below-v}{math@below@v}{-0.4}
+  \msz@opt{lim}{math-below-h}{math@below@h}{0}
+  \msz@opt{lim}{math-script-v}{math@script@v}{0.3}
+  \msz@opt{lim}{math-script-h}{math@script@h}{-0.05}
 
-  \msz@lim@opt{math-below-v}{math@below@v}{-0.4}
-  \msz@lim@opt{math-below-h}{math@below@h}{0}
-  \msz@lim@opt{math-script-v}{math@script@v}{0.3}
-  \msz@lim@opt{math-script-h}{math@script@h}{-0.05}
+  \msz@opt{lim}{text-before}{text@before}{0}
+  \msz@opt{lim}{text-after}{text@after}{0}
+  \msz@opt{lim}{text-above}{text@above}{0.5}
+  \msz@opt{lim}{text-below}{text@below}{0.5}
 
-  \msz@lim@opt{text-before}{text@before}{0}
-  \msz@lim@opt{text-after}{text@after}{0}
-  \msz@lim@opt{text-above}{text@above}{0.5}
-  \msz@lim@opt{text-below}{text@below}{0.5}
-
-  \msz@lim@opt{text-below-v}{text@below@v}{-0.4}
-  \msz@lim@opt{text-below-h}{text@below@h}{0}
-  \msz@lim@opt{text-script-v}{text@script@v}{0.3}
-  \msz@lim@opt{text-script-h}{text@script@h}{-0.05}
+  \msz@opt{lim}{text-below-v}{text@below@v}{-0.4}
+  \msz@opt{lim}{text-below-h}{text@below@h}{0}
+  \msz@opt{lim}{text-script-v}{text@script@v}{0.3}
+  \msz@opt{lim}{text-script-h}{text@script@h}{-0.05}
 
 \ExplSyntaxOn
 
@@ -1464,10 +1262,8 @@
   \cs_new:Npn \__msz_lim_opt:n #1
     { \use:c { msz@lim@ \l__msz_lim_mode_tl @ #1 } }
 
-  % one part of the script — #1 star  #2 content  #3 style of the script.
-  % Starred: a box scaled by zlim-scale-<style of the operator> (see the
-  % header for what the factor multiplies); unstarred: the content itself,
-  % so TeX spaces it against the arrow exactly as in a plain limit.
+  % one part of the script — #1 star  #2 content  #3 style of the script;
+  % starred: scaled box, unstarred: the content itself
   \cs_new_protected:Npn \__msz_lim_part:nnN #1#2#3
     {
       \bool_if:nTF {#1}
@@ -1475,9 +1271,8 @@
         {#2}
     }
 
-  % computes the script's position for the current form — its baseline raise
-  % (dim y) and the x of its left edge from the operator's left edge (dim x)
-  % — then the left/right overhangs that contain it
+  % computes the script's raise (y) and left-edge x from the operator's left
+  % edge for the current form, and the overhangs
   \cs_new_protected:Npn \__msz_lim_place:
     {
       \dim_set:Nn \l__msz_lim_v_dim
@@ -1514,14 +1309,10 @@
         }
     }
 
-  % builds the whole output (one \mathchoice branch), reading the form
-  % already selected into \l__msz_lim_form_tl by \zlim itself —
-  % #1 var star  #2 var  #3 limit star  #4 limit  #5 "math"|"text"
-  % #6 style name of the operator (display|text|script|scriptscript)
-  % #7 style of the operator  #8 style of the script
-  % The output box is used bare: \zlim wraps it in \mathop OUTSIDE the
-  % \mathchoice, so a script or \left/\right attached afterwards sees its
-  % true height instead of an empty atom.
+  % whole output (one \mathchoice branch), used bare: \zlim wraps it in
+  % \mathop outside the \mathchoice — #1 var star  #2 var  #3 limit star
+  % #4 limit  #5 "math"|"text"  #6 style name of the operator  #7 style of the
+  % operator  #8 style of the script
   \cs_new_protected:Npn \__msz_lim_build:nnnnnnNN #1#2#3#4#5#6#7#8
     {
       \tl_set:Nn \l__msz_lim_mode_tl {#5}
@@ -1565,6 +1356,7 @@
 
   \NewDocumentCommand \zlim { t+ s m s m }
     {
+      \__msz_begin:
       \IfBooleanTF {#1}
         { \tl_set:Nn \l__msz_lim_form_tl { script } }
         { \tl_set:Nn \l__msz_lim_form_tl { below } }
@@ -1580,6 +1372,7 @@
             }
           \nolimits
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
@@ -1587,135 +1380,60 @@
 % ==============================================================================
 % \zint *[lower] *[upper] * * [type]
 % ------------------------------------------------------------------------------
-% Configurable integral operator (no body argument — place it immediately
-% before the integrand, exactly as \int itself). TYPE selects the glyph
-% cluster: "1" (default) a single integral, "2".."n" n tightly spaced
-% integrals (surface, volume, ...), "o" a contour \oint, anything else a
-% bridged \int \cdots \int. The (up to two) stars immediately before [type]
-% select the placement CLASS, independently of math/text style: none -> slant
-% (default), one -> stack, two -> right. A star before [lower]/[upper]
-% additionally scales that limit by `zint-scale-<style>`, where <style>
-% (display, text, script, scriptscript) is the style of the GLYPH; the same
-% four factors apply to both limits. The switch `zint-scale-absolute` (see
-% GLOBAL) selects the meaning: true (default) -> normal size x factor; false
-% -> unstarred limit size x factor. The defaults are absolute factors derived
-% as in "Choosing the factors" in GLOBAL. A starred limit is guarded against
-% shrinking below the scriptscript size when nested in other scaled
-% boxes (see "Nesting guard" in GLOBAL); unstarred limits are floored by TeX
-% itself.
-%
-% Both limits are always boxes placed explicitly, never by TeX's script
-% machinery, so every combination of mode and class shares one geometry, and
-% limits are free to overlap the glyph.
-%
-% Every position and frame margin is a dimensionless RATIO of a unit measured
-% in the style of the glyph cluster (see GLOBAL): vertical options (v, above,
-% below) are ratios of its x-height, horizontal ones (h, before, after) of its
-% quad, so one setting looks the same at any style, including inside
-% exponents. The mu kerns `-separation`, `-dots-left` and `-dots-right`
-% already follow the style and remain mu lengths.
-%
-% Option names: zint-<mode>-<class>-<limit>-<axis>, with
-%   mode   math (display style) | text (text, script and scriptscript style)
-%   class  slant | stack | right
-%   limit  top (upper limit) | bottom (lower limit)
-%   axis   v (vertical) | h (horizontal)
-% and zint-<mode>-<separation|dots-left|dots-right> for the cluster and
-% zint-<mode>-<before|after|above|below> for the frame. Every key exists for
-% every mode/class combination. The scales zint-scale-<style> and the switch
-% zint-scale-absolute are mode-free.
-%
-% Coordinates: one Cartesian system for every limit — x positive to the
-% right, y positive upward. Vertically the origin is always the vertical
-% centre of the glyph cluster; `...-v` is the y of the limit's NEAREST edge
-% (lower edge of a top limit, upper edge of a bottom limit), so top values
-% are positive and bottom values negative. Horizontally the origin and the
-% limit's anchored edge depend on the class:
-%   stack  origin = horizontal centre of the whole cluster; the limit's own
-%          CENTRE is anchored, so one value suits limits of any width.
-%   right  origin = centre of the rightmost glyph (the glyph centre for a
-%          single integral, so it does not depend on the number of
-%          integrals); the LEFT edge of both limits is anchored, so wider
-%          limits grow away from the glyph.
-%   slant  origin DIFFERS per limit, to keep a cluster's limits fixed
-%          relative to its outer silhouette regardless of how many glyphs it
-%          has: for the bottom limit, origin = the cluster's LEFT edge and
-%          the limit's RIGHT edge is anchored (negative h moves it further
-%          left); for the top limit, origin = the cluster's RIGHT edge and
-%          the limit's LEFT edge is anchored (positive h moves it further
-%          right). This keeps a 1- and a 2-integral cluster's limits from
-%          jumping when only the type changes.
-%
-% The whole output is one box whose height and depth cover the cluster and
-% both limits, plus `above`/`below`, and whose width covers the same plus
-% `before`/`after` (all signed and additive, as in \zscript), so neighbouring
-% lines are pushed apart while inner pieces may still overlap each other. A
-% negative `after` removes part of the italic correction kept in the glyph's
-% width. `-separation` is the kern between consecutive \intop glyphs;
-% `-dots-left` and `-dots-right` are the kerns before and after the interior
-% \cdots of a bridged cluster, kept apart because the slant of the glyphs
-% makes the optical gaps on its two sides differ. The box is wrapped in \mathop
-% OUTSIDE the \mathchoice, so a script or \left/\right attached afterwards
-% sees its true height.
-%
-%   \zint[0][T] f(t)\,dt        \zint*[a][b] f(x)\,dx
-%   \zint[a][b][2] f\,dA        \zint[a][b]**[o] \vec{F} \cdot d\vec{r}
+% Integral operator, placed before the integrand. [type]: 1 (default) single,
+% n integer cluster, o contour, anything else bridged \int \cdots \int. Stars
+% before [type] select the class (none: slant, one: stack, two: right); a star
+% before a limit scales it by `zint-scale-<style of the glyph>`. Output: one
+% \mathop box covering the cluster and both limits.
 % ==============================================================================
 
-  % \msz@int@opt {key suffix} {macro suffix} {default} — declares the option
-  % macro \msz@int@<macro suffix> and its key zint-<key suffix> in one go
-  \newcommand{\msz@int@opt}[3]{%
-    \expandafter\newcommand\csname msz@int@#2\endcsname{#3}%
-    \define@key{shorthand}{zint-#1}{\expandafter\renewcommand\csname msz@int@#2\endcsname{##1}}%
-  }
+  \msz@opt{int}{math-separation}{math@separation}{-20mu}
+  \msz@opt{int}{math-dots-left}{math@dots@left}{-20mu}
+  \msz@opt{int}{math-dots-right}{math@dots@right}{-10mu}
+  \msz@opt{int}{math-before}{math@before}{0}
+  \msz@opt{int}{math-after}{math@after}{-0.2}
+  \msz@opt{int}{math-above}{math@above}{0.15}
+  \msz@opt{int}{math-below}{math@below}{0.15}
 
-  \msz@int@opt{math-separation}{math@separation}{-20mu}
-  \msz@int@opt{math-dots-left}{math@dots@left}{-20mu}
-  \msz@int@opt{math-dots-right}{math@dots@right}{-10mu}
-  \msz@int@opt{math-before}{math@before}{0}
-  \msz@int@opt{math-after}{math@after}{-0.2}
-  \msz@int@opt{math-above}{math@above}{0.15}
-  \msz@int@opt{math-below}{math@below}{0.15}
+  \msz@opt{int}{math-slant-top-v}{math@slant@top@v}{1.8}
+  \msz@opt{int}{math-slant-top-h}{math@slant@top@h}{-0.5}
+  \msz@opt{int}{math-slant-bottom-v}{math@slant@bottom@v}{-2}
+  \msz@opt{int}{math-slant-bottom-h}{math@slant@bottom@h}{-0.1}
+  \msz@opt{int}{math-stack-top-v}{math@stack@top@v}{3}
+  \msz@opt{int}{math-stack-top-h}{math@stack@top@h}{0.3}
+  \msz@opt{int}{math-stack-bottom-v}{math@stack@bottom@v}{-3}
+  \msz@opt{int}{math-stack-bottom-h}{math@stack@bottom@h}{-0.8}
+  \msz@opt{int}{math-right-top-v}{math@right@top@v}{1.4}
+  \msz@opt{int}{math-right-top-h}{math@right@top@h}{0.3}
+  \msz@opt{int}{math-right-bottom-v}{math@right@bottom@v}{-1.8}
+  \msz@opt{int}{math-right-bottom-h}{math@right@bottom@h}{-0.35}
 
-  \msz@int@opt{math-slant-top-v}{math@slant@top@v}{1.8}
-  \msz@int@opt{math-slant-top-h}{math@slant@top@h}{-0.5}
-  \msz@int@opt{math-slant-bottom-v}{math@slant@bottom@v}{-2}
-  \msz@int@opt{math-slant-bottom-h}{math@slant@bottom@h}{-0.1}
-  \msz@int@opt{math-stack-top-v}{math@stack@top@v}{3}
-  \msz@int@opt{math-stack-top-h}{math@stack@top@h}{0.3}
-  \msz@int@opt{math-stack-bottom-v}{math@stack@bottom@v}{-3}
-  \msz@int@opt{math-stack-bottom-h}{math@stack@bottom@h}{-0.8}
-  \msz@int@opt{math-right-top-v}{math@right@top@v}{1.4}
-  \msz@int@opt{math-right-top-h}{math@right@top@h}{0.3}
-  \msz@int@opt{math-right-bottom-v}{math@right@bottom@v}{-1.8}
-  \msz@int@opt{math-right-bottom-h}{math@right@bottom@h}{-0.35}
+  \msz@opt{int}{text-separation}{text@separation}{-10mu}
+  \msz@opt{int}{text-dots-left}{text@dots@left}{-10mu}
+  \msz@opt{int}{text-dots-right}{text@dots@right}{-6mu}
+  \msz@opt{int}{text-before}{text@before}{0}
+  \msz@opt{int}{text-after}{text@after}{-0.2}
+  \msz@opt{int}{text-above}{text@above}{0.15}
+  \msz@opt{int}{text-below}{text@below}{0.15}
 
-  \msz@int@opt{text-separation}{text@separation}{-10mu}
-  \msz@int@opt{text-dots-left}{text@dots@left}{-10mu}
-  \msz@int@opt{text-dots-right}{text@dots@right}{-6mu}
-  \msz@int@opt{text-before}{text@before}{0}
-  \msz@int@opt{text-after}{text@after}{-0.2}
-  \msz@int@opt{text-above}{text@above}{0.15}
-  \msz@int@opt{text-below}{text@below}{0.15}
+  \msz@opt{int}{text-slant-top-v}{text@slant@top@v}{0.7}
+  \msz@opt{int}{text-slant-top-h}{text@slant@top@h}{-0.1}
+  \msz@opt{int}{text-slant-bottom-v}{text@slant@bottom@v}{-0.7}
+  \msz@opt{int}{text-slant-bottom-h}{text@slant@bottom@h}{-0.1}
+  \msz@opt{int}{text-stack-top-v}{text@stack@top@v}{1.6}
+  \msz@opt{int}{text-stack-top-h}{text@stack@top@h}{0.2}
+  \msz@opt{int}{text-stack-bottom-v}{text@stack@bottom@v}{-1.6}
+  \msz@opt{int}{text-stack-bottom-h}{text@stack@bottom@h}{-0.4}
+  \msz@opt{int}{text-right-top-v}{text@right@top@v}{0.2}
+  \msz@opt{int}{text-right-top-h}{text@right@top@h}{0.3}
+  \msz@opt{int}{text-right-bottom-v}{text@right@bottom@v}{-0.8}
+  \msz@opt{int}{text-right-bottom-h}{text@right@bottom@h}{0}
 
-  \msz@int@opt{text-slant-top-v}{text@slant@top@v}{0.7}
-  \msz@int@opt{text-slant-top-h}{text@slant@top@h}{-0.1}
-  \msz@int@opt{text-slant-bottom-v}{text@slant@bottom@v}{-0.7}
-  \msz@int@opt{text-slant-bottom-h}{text@slant@bottom@h}{-0.1}
-  \msz@int@opt{text-stack-top-v}{text@stack@top@v}{1.6}
-  \msz@int@opt{text-stack-top-h}{text@stack@top@h}{0.2}
-  \msz@int@opt{text-stack-bottom-v}{text@stack@bottom@v}{-1.6}
-  \msz@int@opt{text-stack-bottom-h}{text@stack@bottom@h}{-0.4}
-  \msz@int@opt{text-right-top-v}{text@right@top@v}{0.2}
-  \msz@int@opt{text-right-top-h}{text@right@top@h}{0.3}
-  \msz@int@opt{text-right-bottom-v}{text@right@bottom@v}{-0.8}
-  \msz@int@opt{text-right-bottom-h}{text@right@bottom@h}{0}
-
-  \msz@int@opt{scale-display}{scale@display}{0.6}
-  \msz@int@opt{scale-text}{scale@text}{0.6}
-  \msz@int@opt{scale-script}{scale@script}{0.43}
-  \msz@int@opt{scale-scriptscript}{scale@scriptscript}{0.43}
-  \msz@int@opt{scale-absolute}{scale@absolute}{true}
+  \msz@opt{int}{scale-display}{scale@display}{0.6}
+  \msz@opt{int}{scale-text}{scale@text}{0.6}
+  \msz@opt{int}{scale-script}{scale@script}{0.43}
+  \msz@opt{int}{scale-scriptscript}{scale@scriptscript}{0.43}
+  \msz@opt{int}{scale-absolute}{scale@absolute}{true}
 
 \ExplSyntaxOn
 
@@ -1746,20 +1464,16 @@
   \cs_new:Npn \__msz_int_opt:n #1
     { \use:c { msz@int@ \l__msz_int_mode_tl @ #1 } }
 
-  % one integral glyph of the cluster for the type in \l__msz_int_type_tl:
-  % \ointop for "o", \intop otherwise. Being an \mathord, TeX adds no
-  % automatic spacing around it, so the cluster kerns are the only spacing.
+  % one glyph of the cluster (\ointop for type "o", else \intop); an \mathord,
+  % so the cluster kerns are the only spacing
   \cs_new_protected:Npn \__msz_int_glyph:
     {
       \mathord
         { \str_if_eq:VnTF \l__msz_int_type_tl { o } { \ointop } { \intop } }
     }
 
-  % renders the glyph cluster for the type in \l__msz_int_type_tl: "o" ->
-  % one \ointop; a bare positive integer n -> n glyphs kerned by
-  % zint-*-separation; anything else -> glyph \cdots glyph, bridged by the
-  % zint-*-dots-left kern before and the zint-*-dots-right kern after the
-  % \cdots. Kerns follow the current mode.
+  % the glyph cluster of the current type: "o", n glyphs kerned by
+  % `-separation`, or glyph \cdots glyph with the `-dots-left/right` kerns
   \cs_new_protected:Npn \__msz_int_cluster:
     {
       \str_if_eq:VnTF \l__msz_int_type_tl { o }
@@ -1784,10 +1498,9 @@
         }
     }
 
-  % sets \l__msz_int_ref_dim (the horizontal origin) and \l__msz_int_anch
-  % _tl (the fraction of the limit's own width subtracted from it to find
-  % the anchored edge) from the current class and the top/bottom branch #1 —
-  % see the class-by-class description in the header comment above.
+  % sets the horizontal origin (\l__msz_int_ref_dim) and the fraction of the
+  % limit's width subtracted from it (\l__msz_int_anch_tl) from the class and
+  % the "top"|"bottom" branch #1 (see the class descriptions in the manual)
   \cs_new_protected:Npn \__msz_int_anchor:n #1
     {
       \str_if_eq:VnTF \l__msz_int_cls_tl { stack }
@@ -1816,11 +1529,9 @@
         }
     }
 
-  % typesets one limit into box #5 and computes its baseline raise (dim #6)
-  % and left-edge position (dim #7) relative to the cluster's left edge, then
-  % widens the left/right overhangs to contain it. #1 star  #2 limit
-  % #3 style of the limit  #4 "top"|"bottom". A starred limit is scaled by
-  % zint-scale-<style of the glyph> (see the header for what it multiplies).
+  % typesets limit #2 into box #5 and computes its raise (dim #6) and left
+  % edge (dim #7) from the cluster's left edge, widening the overhangs —
+  % #1 star  #3 style of the limit  #4 "top"|"bottom"
   \cs_new_protected:Npn \__msz_int_limit:nnnnNNN #1#2#3#4#5#6#7
     {
       \hbox_set:Nn #5
@@ -1864,14 +1575,10 @@
         }
     }
 
-  % builds the whole integral (one \mathchoice branch), reading the class
-  % already selected into \l__msz_int_cls_tl by \zint itself —
-  % #1 lower star  #2 lower  #3 upper star  #4 upper  #5 type
-  % #6 style name of the glyph (display|text|script|scriptscript)
-  % #7 style of the glyph  #8 style of the limits
-  % The output box is used bare: \zint wraps it in \mathop OUTSIDE the
-  % \mathchoice, so a script or \left/\right attached afterwards sees its
-  % true height instead of an empty atom.
+  % whole integral (one \mathchoice branch), used bare: \zint wraps it in
+  % \mathop outside the \mathchoice — #1 lower star  #2 lower  #3 upper star
+  % #4 upper  #5 type  #6 style name of the glyph  #7 style of the glyph
+  % #8 style of the limits
   \cs_new_protected:Npn \__msz_int_build:nnnnnnNN #1#2#3#4#5#6#7#8
     {
       \tl_set:Nn \l__msz_int_type_tl {#5}
@@ -1936,6 +1643,7 @@
 
   \NewDocumentCommand \zint { s O{} s O{} s s O{1} }
     {
+      \__msz_begin:
       \bool_if:nTF {#5}
         {
           \bool_if:nTF {#6}
@@ -1955,14 +1663,138 @@
             }
           \nolimits
         }
+      \group_end:
     }
 
 \ExplSyntaxOff
 
+% ==============================================================================
+% \zalias {new} {base} {key=value,...}
 % ------------------------------------------------------------------------------
-% Process package options. Every section reads its option macros at call
-% time, so all keys given here take effect (see the header note). The family
-% is given explicitly because it differs from the package name.
+% Defines <new> as a variant of <base> (a command with options, or an alias):
+% same arguments, but the keys apply during each call. The prefix of the
+% base's family is prepended to every key, so only its options can change;
+% `reset` (key) and \zreset (value) restore options from the snapshot taken
+% by the outermost enclosing alias call of the family.
+%
+% Registry: \msz@cmd@<command> holds the family of each package command
+% (empty: no options). An alias <new> stores its root command in
+% \msz@alias@cmd@<new> and its flattened, prefixed key list (the keys of its
+% base first) in \msz@alias@keys@<new>. The alias macro hands the list and the
+% family to \g__msz_alias_tl / \g__msz_alias_fam_tl and calls the root
+% command, whose \__msz_begin: consumes them.
+% ==============================================================================
+
+\ExplSyntaxOn
+
+  \tl_new:N \l__msz_alias_new_tl
+  \tl_new:N \l__msz_alias_base_tl
+  \tl_new:N \l__msz_alias_cmd_tl
+  \tl_new:N \l__msz_alias_fam_tl
+  \tl_new:N \l__msz_alias_prefix_tl
+  \tl_new:N \l__msz_alias_keys_tl
+
+  \tl_const:cn { msz@cmd@zline } { line }
+  \tl_const:cn { msz@cmd@zvec  } { line }
+  \tl_const:cn { msz@cmd@zmat  } { line }
+  \clist_map_inline:nn { zscale, zdot, zarg, zdiff, zcond, zscript, zprime, zlim, zint }
+    { \tl_const:cx { msz@cmd@ #1 } { \str_tail:n {#1} } }
+  \clist_map_inline:nn { zpunct, zfrac, zalias, zreset }
+    { \tl_const:cn { msz@cmd@ #1 } { } }
+
+  \msg_new:nnn { math-shorthandz } { alias-new }
+    {
+      #1~is~a~command~of~the~package~or~an~existing~macro,~so~
+      \c_backslash_str zalias~cannot~define~it.
+    }
+  \msg_new:nnn { math-shorthandz } { alias-base }
+    {
+      #1~is~neither~a~command~of~the~package~with~options~nor~an~alias~of~one,~
+      so~\c_backslash_str zalias~cannot~be~based~on~it.
+    }
+
+  % keyval handlers: append key #1, or key #1 with value #2, to the key list,
+  % with the prefix of the base family prepended
+  \cs_new_protected:Npn \__msz_alias_key:n #1
+    {
+      \tl_put_right:Nx \l__msz_alias_keys_tl
+        { \exp_not:V \l__msz_alias_prefix_tl \exp_not:n {#1} , }
+    }
+  \cs_new_protected:Npn \__msz_alias_pair:nn #1#2
+    {
+      \tl_put_right:Nx \l__msz_alias_keys_tl
+        { \exp_not:V \l__msz_alias_prefix_tl \exp_not:n { #1 = {#2} , } }
+    }
+
+  % resolves the base (name in \l__msz_alias_base_tl) into its root command,
+  % its family and the keys it already carries; the family stays empty when
+  % the base cannot be aliased
+  \cs_new_protected:Npn \__msz_alias_base:
+    {
+      \tl_clear:N \l__msz_alias_keys_tl
+      \tl_clear:N \l__msz_alias_cmd_tl
+      \tl_clear:N \l__msz_alias_fam_tl
+      \cs_if_exist:cTF { msz@alias@cmd@ \l__msz_alias_base_tl }
+        {
+          \tl_set_eq:Nc \l__msz_alias_keys_tl { msz@alias@keys@ \l__msz_alias_base_tl }
+          \tl_set_eq:Nc \l__msz_alias_cmd_tl  { msz@alias@cmd@ \l__msz_alias_base_tl }
+        }
+        { \tl_set_eq:NN \l__msz_alias_cmd_tl \l__msz_alias_base_tl }
+      \cs_if_exist:cT { msz@cmd@ \l__msz_alias_cmd_tl }
+        { \tl_set_eq:Nc \l__msz_alias_fam_tl { msz@cmd@ \l__msz_alias_cmd_tl } }
+    }
+
+  % defines alias #1 of base #2 with keys #3; the keys are validated once in
+  % a throwaway group (with a snapshot, so that reset is accepted)
+  \cs_new_protected:Npn \__msz_alias_define:NNn #1#2#3
+    {
+      \tl_set:Nx \l__msz_alias_new_tl  { \cs_to_str:N #1 }
+      \tl_set:Nx \l__msz_alias_base_tl { \cs_to_str:N #2 }
+      \bool_if:nTF
+        {
+          \cs_if_exist_p:c { msz@cmd@ \l__msz_alias_new_tl }
+          ||
+          (
+            \cs_if_exist_p:N #1
+            && ! \cs_if_exist_p:c { msz@alias@cmd@ \l__msz_alias_new_tl }
+          )
+        }
+        { \msg_error:nnx { math-shorthandz } { alias-new } { \token_to_str:N #1 } }
+        {
+          \__msz_alias_base:
+          \tl_if_empty:NTF \l__msz_alias_fam_tl
+            { \msg_error:nnx { math-shorthandz } { alias-base } { \token_to_str:N #2 } }
+            {
+              \tl_set:Nx \l__msz_alias_prefix_tl { z \l__msz_alias_fam_tl - }
+              \keyval_parse:NNn \__msz_alias_key:n \__msz_alias_pair:nn {#3}
+              \group_begin:
+                \__msz_snap:n { \l__msz_alias_fam_tl }
+                \exp_args:NnV \setkeys { shorthand } \l__msz_alias_keys_tl
+              \group_end:
+              \cs_set:cpx { msz@alias@keys@ \l__msz_alias_new_tl }
+                { \exp_not:V \l__msz_alias_keys_tl }
+              \cs_set:cpx { msz@alias@cmd@ \l__msz_alias_new_tl }
+                { \exp_not:V \l__msz_alias_cmd_tl }
+              \cs_set_protected:Npx #1
+                {
+                  \exp_not:N \tl_gset:Nn \exp_not:N \g__msz_alias_tl
+                    { \exp_not:V \l__msz_alias_keys_tl }
+                  \exp_not:N \tl_gset:Nn \exp_not:N \g__msz_alias_fam_tl
+                    { \exp_not:V \l__msz_alias_fam_tl }
+                  \exp_not:c { \l__msz_alias_cmd_tl }
+                }
+            }
+        }
+    }
+
+  \NewDocumentCommand \zalias { m m m }
+    { \__msz_alias_define:NNn #1 #2 {#3} }
+
+\ExplSyntaxOff
+
+% ------------------------------------------------------------------------------
+% Process package options (family given explicitly, since it differs from the
+% package name).
 % ------------------------------------------------------------------------------
 
   \ProcessOptionsX<shorthand>\relax
