@@ -1,8 +1,10 @@
-# math-shorthandz — smart shorthands for typesetting math in LaTeX
-
+[![Buy me a coffee](https://img.shields.io/badge/-%20-FFDD00?logo=buymeacoffee&logoColor=black&logoSize=auto&style=flat-square)](https://buymeacoffee.com/tplobo)[![Buy me a coffee label](https://img.shields.io/badge/-Buy%20me%20a%20coffee-57606A?style=flat-square)](https://buymeacoffee.com/tplobo)
+&emsp;&emsp;
 [![CTAN](https://img.shields.io/badge/-CTAN-2A7F7F?logo=latex&logoColor=white&logoSize=auto&style=flat-square)](https://ctan.org/pkg/math-shorthandz)[![CTAN version](https://img.shields.io/ctan/v/math-shorthandz?label=version%3A&labelColor=57606A&color=57606A&style=flat-square)](https://ctan.org/pkg/math-shorthandz)
 &emsp;&emsp;
 [![Zenodo](https://img.shields.io/badge/-%20-1682D4?logo=zenodo&logoColor=white&logoSize=auto&style=flat-square)](https://doi.org/10.5281/zenodo.23414428)[![Zenodo DOI](https://img.shields.io/badge/DOI%3A-10.5281%2Fzenodo.23414428-57606A?labelColor=57606A&style=flat-square)](https://doi.org/10.5281/zenodo.23414428)
+
+# math-shorthandz — smart shorthands for typesetting math in LaTeX
 
 The **math-shorthandz** package has shorthand macros for typesetting the most
 common mathematical expressions in LaTeX. It provides compact commands to
