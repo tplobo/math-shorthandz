@@ -1,4 +1,4 @@
-[![Buy me a coffee](https://img.shields.io/badge/-%20-FFDD00?logo=buymeacoffee&logoColor=black&logoSize=auto&style=flat-square)](https://buymeacoffee.com/tplobo)[![Buy me a coffee label](https://img.shields.io/badge/-Buy%20me%20a%20coffee-57606A?style=flat-square)](https://buymeacoffee.com/tplobo)
+[![Buy Me a Coffee](https://img.shields.io/badge/-Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black&logoSize=auto&style=flat-square)](https://buymeacoffee.com/tplobo)[![Buy Me a Coffee user](https://img.shields.io/badge/drinker%3A-tplobo-57606A?labelColor=57606A&style=flat-square)](https://buymeacoffee.com/tplobo)
 &emsp;&emsp;
 [![CTAN](https://img.shields.io/badge/-CTAN-2A7F7F?logo=latex&logoColor=white&logoSize=auto&style=flat-square)](https://ctan.org/pkg/math-shorthandz)[![CTAN version](https://img.shields.io/ctan/v/math-shorthandz?label=version%3A&labelColor=57606A&color=57606A&style=flat-square)](https://ctan.org/pkg/math-shorthandz)
 &emsp;&emsp;
