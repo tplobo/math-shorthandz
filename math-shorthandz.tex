@@ -225,17 +225,13 @@ The local macro \cs{nl} is used to add line breaks in the example boxes, so it h
 
 Copyright \textcopyright{} 2020--2026 Tiago Pomella Lobo. This work may be distributed and/or modified under the conditions of the \LaTeX\ Project Public License, version 1.3c or later (\url{https://www.latex-project.org/lppl.txt}), and has the maintenance status "author-maintained". Source code, issues and releases: \url{https://github.com/tplobo/math-shorthandz}.
 
+
 % ==============================================================================
 \section{User Interface}
 \label{sc:interface}
 % ==============================================================================
 
-% ------------------------------------------------------------------------------
-\subsection{Package options}
-\label{ss:options}
-% ------------------------------------------------------------------------------
-
-All tunable constants are exposed as key--value options via a unified interface. All keys belong to the family \texttt{shorthand}, so that is the first argument of \cs{setkeys} (not the package name). Every option is a plain macro read at call time, so it may be given to \cs{usepackage}, changed at any point with \cs{setkeys}\texttt{\{shorthand\}\{key=value\}}, or overridden for a single call by doing so inside a \TeX\ group. The table that follows the syntax of each command lists its options, default values and their effect(s); captions explain eventual placeholders.
+The options for each command are listed in the tables of their own subsection. Some brief examples are shown using \cs{setkeys} to change them, but more details on the different ways to set them can be found in Section~\ref{sc:options}.
 
 % ------------------------------------------------------------------------------
 \clearpage
@@ -1914,11 +1910,74 @@ With two stars before \macroMeta{type}, the \opt{right} class is applied for a m
     Increased spacing: $\zint[][][2] f \zdiff{A}$.
   }
 \end{tcblisting}
+
+
 % ==============================================================================
 \clearpage
-\section{Aliases}
-\label{sc:aliases}
+\section{Package options}
+\label{sc:options}
 % ==============================================================================
+
+All tunable values of the package are options. They can be set globally, for the next call of a command only, or in reusable variants of a command, as described in the following subsections.
+
+% ------------------------------------------------------------------------------
+%\clearpage
+\subsection{Global options}
+\label{ss:global}
+% ------------------------------------------------------------------------------
+
+All tunable constants are exposed as key--value options via a unified interface. All keys belong to the family \texttt{shorthand}, so that is the first argument of \cs{setkeys} (not the package name). Every option is a plain macro read at call time, so it may be given to \cs{usepackage}, changed at any point with \cs{setkeys}\texttt{\{shorthand\}\{key=value\}}, or overridden for a single call by doing so inside a \TeX\ group. The table that follows the syntax of each command lists its options, default values and their effect(s); captions explain eventual placeholders.
+
+% ------------------------------------------------------------------------------
+%\clearpage
+\subsection{Local options}
+\label{ss:local}
+% ------------------------------------------------------------------------------
+
+\macroDescription{\zlocal}
+The \cs{zlocal} utility defines a prefix command that changes options for the next call of a package command only. It accepts arguments at call time, so a single definition can take a different value at each call.
+
+\begin{syntax}
+  \cs{zlocal}\macroArg{new}\macroArg{commands}\macroArg{key=value,\dots}
+\end{syntax}
+
+The list \macroMeta{commands} contains names of package commands that have options, with (\eg \cs{zscript}, \cs{zlim}) or without backslash (\eg \opt{zscript}, \opt{zlim}). If \macroMeta{commands} is empty, all commands are used. The \macroMeta{key} is automatically prepended with the option prefix of each listed command, so a key that the commands share (\eg the frame options) changes all of them; a key that is missing for some commands is skipped for them. Every key must exist in at least one command, which is validated during definition. The values may contain \texttt{\#1}, \dots, \texttt{\#9}, which become the arguments of \macroMeta{new}, as many as the highest one used. An existing macro (including the package commands) cannot be overwritten, but \macroMeta{new} can be redefined. A prefix must be placed directly before the command it changes. If it is followed by anything else, it is discarded, so it can never leak into a later call. Consecutive prefixes add up, and the last one wins for an option set twice. Commands of the same kind typeset inside the arguments inherit the values.
+
+\macroDescription{\zref}
+\macroDescription{\zwrapper}
+For convenience, the package predefines the prefixes \cs{zref} and \cs{zwrapper}, which set the options \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript} (see Section~\ref{ss:zscript}). They are equivalent to \cs{zlocal}\texttt{\{\textbackslash zref\}\{zscript\}\{reference=\#1\}} and \cs{zlocal}\texttt{\{\textbackslash zwrapper\}\{zscript\}\{wrapper=\#1\}}, and, as any prefix, can be redefined.
+\begin{syntax}
+  \cs{zref}\macroArg{expr} \qquad \cs{zwrapper}\macroArg{macro}
+\end{syntax}
+The following examples use \cs{zref} to address the same case presented in Section~\ref{ss:zscript}, \cs{zwrapper} to switch the wrapper of a label, and two new prefixes to demonstrate how definitions can be combined:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.75\linewidth
+  }
+  \zlocal{\zlow}{zscript}{math-lr-v=#1, text-lr-v=#1}
+  \zlocal{\zgap}{zscript, zlim}{math-after=#1, text-after=#1}
+  \nl[2.5]
+  \begin{gather*}
+    \zscript{\tilde{A}}[][high] \ne \zref{A}\zscript{\tilde{A}}[][base]
+    \nl
+                         \zscript{x}[base]
+    \ne          \zref{g}\zscript{x}[low]
+    \ne \zlow{-1}\zref{g}\zscript{x}[lower]
+    \nl
+    \zscript{R}[pre-ion] \ne \zwrapper{\text}\zscript{R}[pre-ion]
+    \nl[0.5]
+    \zscript{x}[a]y \ne \zgap{1}\zscript{x}[a]y
+    \nl[0.5]
+    \zlim{n}{\infty}y \ne \zgap{1}\zlim{n}{\infty}y
+  \end{gather*}
+\end{tcblisting}
+
+% ------------------------------------------------------------------------------
+\clearpage
+\subsection{Aliases}
+\label{ss:aliases}
+% ------------------------------------------------------------------------------
 
 \macroDescription{\zalias}
 The \cs{zalias} utility defines a new command based on one of the package commands that have options, but with its own option values. It can be used when different sets of options need to be re-used multiple times in the same document. The \macroMeta{new} command takes the same arguments of the \macroMeta{base} command.
@@ -1945,7 +2004,7 @@ The following example defines an alias to address the same case presented in Sec
 \end{tcblisting}
 
 \macroDescription{\zreset}
-Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it.
+Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it. Both also work in the keys of \cs{zlocal}, whose values may be \cs{zreset} or contain it in an argument, as the last example below shows.
 
 The following example shows the inheritance, and how an inner alias with \cs{zreset} avoids it:
 \begin{tcblisting}{
@@ -2021,6 +2080,25 @@ and the restored value is also not the one at definition:
       \zscriptHigh{x}[\zscriptLow{high}[\zscriptRaw{low}[base]]]
     $
   }
+\end{tcblisting}
+
+Finally, the prefix values are applied inside the group of the call after the keys of an alias. So a prefix wins when alongside an alias, and can undo its option for call:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.7\linewidth
+  }
+  \zalias{\zscriptLow}{\zscript}{math-lr-v=-1}
+  \zlocal{\zlr}{zscript}{math-lr-v=#1}
+  \nl[4]
+  \begin{gather*}
+                \zscript{x}[base]
+    \ne         \zscriptLow{x}[low]
+    \ne \zlr{-2}\zscriptLow{x}[lower]
+    \nl[0.5]
+                     \zscriptLow{x}[low]
+    \ne \zlr{\zreset}\zscriptLow{x}[base]
+  \end{gather*}
 \end{tcblisting}
 
 
@@ -2185,27 +2263,32 @@ and the restored value is also not the one at definition:
 \end{tcblisting}
 
 % ==============================================================================
+\clearpage
 \section{Change History}
 % ==============================================================================
 
 \begin{description}[style=nextline, leftmargin=2cm, labelwidth=!]
 
-  \item[v1.1.0 (2026/10/23)] Aliases of commands. New options. Standardized option declaration.
+  \item[v1.1.0 (2026/10/28)] Local prefixes and aliases of commands. New options. Standardized option declaration.
     \begin{itemize}[nosep]
 
-      \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package. The value \cs{zreset} and the key \opt{reset} restore options to the values they had when the outermost enclosing alias call began.
-      
       \item \textbf{Warning: breaking change in a minor release.} The keys of \cs{zscale} were renamed from \opt{scale-}\macroMeta{style} and \opt{scale-absolute} to \opt{zscale-}\macroMeta{style} and \opt{zscale-absolute}. They were a typo against the rule that every key carries the full name of its command, and the version is bumped to v1.1.0 instead of v2.0.0 for that reason only, but it \textit{does} break existing documents: replace the old keys, in \cs{usepackage} and in \cs{setkeys}; no alias is kept.
 
       \item \textbf{Scale keys.} The keys \opt{scale-}\macroMeta{style} used to live in a global section of the package because \cs{zscale} had a scaling shared by all commands. Since every command now owns its four factors and switch, that distinction was gone, and the keys were moved to the section of \cs{zscale}, where they belong.
 
-      \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package.
+      \item \cs{zlocal}: new command that defines prefix commands, which change options for the next call of a command only. They take up to nine arguments, can change the options of several commands at once, add up when combined and are applied after the keys of an alias. A prefix that is not followed by a command with options is discarded.
+
+      \item \cs{zref}, \cs{zwrapper}: new prefixes, predefined with \cs{zlocal}, that set \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript}. Like any prefix, they can be redefined.
+
+      \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package. The value \cs{zreset} and the key \opt{reset} restore options to the values they had when the outermost enclosing alias call began.
+
+      \item \textbf{Package options.} The subsection on options became part of a new \textit{Package options} section, with the subsections \textit{Global options} (moved from the user interface), \textit{Local options} and \textit{Aliases}.
 
       \item \cs{zscript}: new option \opt{zscript-reference}, a math expression whose edges, instead of the printed nucleus's, define the positions of all scripts, so that a decorated nucleus (\eg{} $\tilde{\Psi}$) takes its scripts where the bare one does. The leading \macroPlus\ is now resolved after the keys of an alias are applied.
 
       \item \cs{zcond}: the condition is now scaled through its own options \opt{zcond-scale-}\macroMeta{style}, \opt{zcond-scale-absolute} and the new switch \opt{zcond-scale-star}, keyed to the math style of the bar. By default the output is essentially unchanged.
 
-      \item \textbf{Declaration of options.} All options are now declared by one generator in the global section, instead of one helper per command or by hand, with unchanged macro names and defaults. The generator also registers every option of each command, which is what \cs{zalias} uses to take snapshots and to apply \opt{reset}.
+      \item \textbf{Declaration of options.} All options are now declared by one generator in the global section, instead of one helper per command or by hand, with unchanged macro names and defaults. The generator also registers every option of each command, which is what \cs{zlocal} and \cs{zalias} use to take snapshots and to apply \opt{reset}.
 
     \end{itemize}
 

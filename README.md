@@ -35,6 +35,8 @@ them a unified style and keeps them distinct from other commands.
 - `\zscale` — style-aware scaling of math content
 - `\zline`, `\zvec`, `\zmat` — stacked underlines for vectors and matrices
 - `\zpunct` — punctuation at the end of a display line
+- `\zlocal`, `\zref`, `\zwrapper` — prefixes that change options for the next call of a command only
+- `\zalias` — variants of any command with their own option values
 
 ```latex
 \usepackage[zint-math-after=-0.3, zarg-kern=1mu]{math-shorthandz}
@@ -82,7 +84,7 @@ https://github.com/tplobo/math-shorthandz.
    - shared helpers for the frame (before/after/above/below and `\box_set_ht:Nn`/`\box_set_dp:Nn`), the overhang computation and the `\rlap`/`\box_move_up:nn` emit used by `\zscript`, `\zprime`, `\zlim` and `\zint`;
    - one shared four-branch `\mathchoice` front end, with mode and sub-style derived once, which would also take over `\__msz_begin:` and `\group_end:`;
    - set the per-call state (form, class, mode) in the same place in every command (`\zprime` sets it in its builder, the others in the public command).
-1. **Rename the scale options for v2.0.0.** Replace the term "scale" in all keys (`zdot-scale-text`, `zscale-text`, ...) by a shorter one, so that `zscale` gets keys of the same form as the other commands. Candidates: `size`, `norm`, `rule`. Breaks every existing key, so it must wait for a major release.
+1. **Rename the scale options for v2.0.0.** Replace the term "scale" in all keys (`zdot-scale-text`, `zscale-text`, ...) by a shorter one, so that `zscale` gets keys of the same form as the other commands. Candidates: `size`, `norm`, `rule`. Breaks every existing key, so it must wait for a major release. Once every command shares the key form `<command>-<term>-<style>`, one `\zlocal` with an empty command list (all commands) could change the scaling of every command at once, which is not possible today (e.g. a predefined prefix switching `<term>-absolute` to `false`).
 1. **`\zscript` reference**: split `zscript-reference` into one reference for the vertical positions and one for the horizontal ones. Today one expression supplies all four edges, and the printed nucleus is centred on it, which is wrong when the two glyphs differ in width (`\mathbf{\Psi}` against `\Psi`).
 1. **`\zalias*`**: a starred form that forces the definition over any macro that is not a command of the package. Not needed so far.
 1. **`\zfrac`**: the "numerator-only" branch of `\__msz_frac_render:nn` is dead code (`\l__msz_frac_den_present_bool` is always true), and its `\bool_if:NF` has two brace groups, so the second would run unconditionally if the bool were ever false. Decide what the branch is for, or remove it. Low priority.

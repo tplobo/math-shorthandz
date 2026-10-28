@@ -14,6 +14,9 @@
 %   \zprime   prime superscript or accent, context-sensitive scaling
 %   \zlim     limit operator with variable and value, below or as a subscript
 %   \zint     configurable integral with glyph type and limit placement
+%   \zlocal   prefix commands that change options for the next call only
+%   \zref     predefined prefix: `zscript-reference` for the next \zscript
+%   \zwrapper predefined prefix: `zscript-wrapper` for the next \zscript
 %   \zalias   variants of the commands above with their own option values
 %
 % Dependencies:
@@ -79,18 +82,22 @@
 % GLOBAL
 % ------------------------------------------------------------------------------
 % Shared by several commands:
-%   \msz@opt       declares an option macro and its key, and registers the
-%                  macro in its family (for \zalias snapshots and resets)
-%   \__msz_begin:  opens every call of a command with options; applies the
-%                  keys of the alias that called it (see \zalias)
-%   units          ratios of a style's x-height (v, above, below) and quad
-%                  (h, before, after); the axis height is also measured
-%   scales         four factors per math style plus `<command>-scale-absolute`
-%                  per command (true: set in normal size, then multiplied;
-%                  false: set in the ambient style, then multiplied)
-%   nesting guard  \l__msz_scale_acc_fp is the scale of the enclosing scaled
-%                  boxes; a nested call is shrunk by it only down to the size
-%                  of a scriptscript call of the same command
+%   \msz@opt         declares an option macro and its key, and registers the
+%                    macro in its family (for snapshots and resets)
+%   \__msz_begin:n   opens every call of a command with options, given its
+%                    family; applies the keys of the alias that called it and
+%                    then those of the local prefixes (\zlocal) waiting
+%   units            ratios of a style's x-height (v, above, below) and quad
+%                    (h, before, after); the axis height is also measured
+%   scales           four factors per math style plus `<command>-scale-absolute`
+%                    per command (true: set in normal size, then multiplied;
+%                    false: set in the ambient style, then multiplied)
+%   nesting guard    \l__msz_scale_acc_fp is the scale of the enclosing scaled
+%                    boxes; a nested call is shrunk by it only down to the size
+%                    of a scriptscript call of the same command
+%   registry         \msz@cmd@<command> holds the family of options of each
+%                    package command (empty: no options); read by \zlocal and
+%                    \zalias
 % ==============================================================================
 
   % \msz@opt {family} {key suffix} {macro suffix} {default} — declares the
@@ -118,23 +125,47 @@
   \dim_new:N \l__msz_unit_axis_dim
   \box_new:N \l__msz_unit_box
 
-  % keys and family of the alias being called, waiting for its command
+    % families of options (one per command with options; \zvec and \zmat use line)
+  \clist_const:Nn \c__msz_fam_clist
+    { line, scale, dot, arg, diff, cond, script, prime, lim, int }
+
+  % registry of the commands of the package, read by \zlocal and \zalias:
+  % \msz@cmd@<command> holds the family of its options (empty: no options).
+  % Prefixes (\zlocal) and aliases (\zalias) are registered by their own
+  % command, so they can be redefined.
+  \tl_const:cn { msz@cmd@zline } { line }
+  \tl_const:cn { msz@cmd@zvec  } { line }
+  \tl_const:cn { msz@cmd@zmat  } { line }
+  \clist_map_inline:nn { zscale, zdot, zarg, zdiff, zcond, zscript, zprime, zlim, zint }
+    { \tl_const:cx { msz@cmd@ #1 } { \str_tail:n {#1} } }
+  \clist_map_inline:nn { zpunct, zfrac, zalias, zlocal, zreset }
+    { \tl_const:cn { msz@cmd@ #1 } { } }
+
+  % keys of the alias being called, waiting for its command
   \tl_new:N  \g__msz_alias_tl
-  \tl_new:N  \g__msz_alias_fam_tl
+
+  % keys of the local prefixes (\zlocal) waiting for the next call, one list
+  % per family, and a flag telling that some list is not empty
+  \bool_new:N \g__msz_local_bool
+  \clist_map_inline:Nn \c__msz_fam_clist
+    { \tl_new:c { g__msz_local_ #1 _tl } }
+
+  \tl_new:N  \l__msz_begin_a_tl
+  \tl_new:N  \l__msz_begin_b_tl
 
   \msg_new:nnn { math-shorthandz } { reset-misuse }
     {
       \c_backslash_str zreset~is~only~valid~as~the~value~of~a~key~in~
-      \c_backslash_str zalias.
+      \c_backslash_str zalias~or~\c_backslash_str zlocal.
     }
   \msg_new:nnn { math-shorthandz } { reset-outside }
     {
       Option~reset~(key~reset~or~value~\c_backslash_str zreset)~is~only~
-      available~in~the~keys~of~\c_backslash_str zalias.
+      available~in~the~keys~of~\c_backslash_str zalias~or~\c_backslash_str zlocal.
     }
 
   % protected marker: as the value of a key, restores the option from the
-  % snapshot of the alias call (see \msz@opt@set)
+  % snapshot of the call (see \msz@opt@set)
   \cs_new_protected:Npn \zreset
     { \msg_error:nn { math-shorthandz } { reset-misuse } }
 
@@ -198,21 +229,34 @@
         { \cs_set:cpn { msz@ #1 @ #2 } { #3 } }
     }
 
-  % opens the group of one call of a command with options and applies in it
-  % the keys of the alias that called it, if any. Outermost alias call of a
-  % family: first snapshots its options. The command closes the group with
+  % discards every stored local key (see \zlocal)
+  \cs_new_protected:Npn \__msz_local_clear:
+    {
+      \bool_gset_false:N \g__msz_local_bool
+      \clist_map_inline:Nn \c__msz_fam_clist
+        { \tl_gclear:c { g__msz_local_ ##1 _tl } }
+    }
+
+  % opens the group of one call of a command of family #1. Takes the keys of
+  % the alias that called it and those of the local prefixes of its family
+  % (and discards all stored ones, so they never reach a later call); the
+  % outermost call first snapshots the family; applies the alias keys and then
+  % the prefix keys, so a prefix wins. The command closes the group with
   % \group_end:, which adds no atom, so spacing and class are those of the output.
-  \cs_new_protected:Npn \__msz_begin:
+  \cs_new_protected:Npn \__msz_begin:n #1
     {
       \group_begin:
-      \tl_if_empty:NF \g__msz_alias_tl
+      \tl_set_eq:NN \l__msz_begin_a_tl \g__msz_alias_tl
+      \tl_gclear:N \g__msz_alias_tl
+      \tl_set_eq:Nc \l__msz_begin_b_tl { g__msz_local_ #1 _tl }
+      \bool_if:NT \g__msz_local_bool { \__msz_local_clear: }
+      \bool_lazy_and:nnF
+        { \tl_if_empty_p:N \l__msz_begin_a_tl }
+        { \tl_if_empty_p:N \l__msz_begin_b_tl }
         {
-          \tl_set_eq:NN \l_tmpa_tl \g__msz_alias_tl
-          \tl_set_eq:NN \l_tmpb_tl \g__msz_alias_fam_tl
-          \tl_gclear:N \g__msz_alias_tl
-          \cs_if_exist:cF { msz@snap@ \l_tmpb_tl @flag }
-            { \__msz_snap:n { \l_tmpb_tl } }
-          \exp_args:NnV \setkeys { shorthand } \l_tmpa_tl
+          \cs_if_exist:cF { msz@snap@ #1 @flag } { \__msz_snap:n {#1} }
+          \exp_args:NnV \setkeys { shorthand } \l__msz_begin_a_tl
+          \exp_args:NnV \setkeys { shorthand } \l__msz_begin_b_tl
         }
     }
 
@@ -266,7 +310,7 @@
   \NewDocumentCommand \zline { O{1} m }
     {
       \leavevmode
-      \__msz_begin:
+      \__msz_begin:n { line }
       \dim_set:Nn \l__msz_line_depth_dim     { \msz@line@depth       }
       \dim_set:Nn \l__msz_line_thickness_dim { \msz@line@thickness   }
       \dim_set:Nn \l__msz_line_sep_dim       { \msz@line@separation  }
@@ -520,7 +564,7 @@
 
   \NewDocumentCommand \zscale { O{} m }
     {
-      \__msz_begin:
+      \__msz_begin:n { scale }
       \ensuremath
         {
           \mathord
@@ -575,7 +619,7 @@
 
   \NewDocumentCommand \zdot { }
     {
-      \__msz_begin:
+      \__msz_begin:n { dot }
       \mathbin
         {
           \mathchoice
@@ -614,7 +658,7 @@
 
   \NewDocumentCommand \zarg { m }
     {
-      \__msz_begin:
+      \__msz_begin:n { arg }
       \ensuremath
         {
           \mathord
@@ -647,7 +691,7 @@
 
   \NewDocumentCommand \zdiff { t+ s t* O{} m }
     {
-      \__msz_begin:
+      \__msz_begin:n { diff }
       \ensuremath
         {
           \IfBooleanTF {#2}
@@ -730,7 +774,7 @@
 
   \NewDocumentCommand \zcond { s s s s O{} m }
     {
-      \__msz_begin:
+      \__msz_begin:n { cond }
       \tl_clear:N \l__msz_cond_size_tl
       \bool_if:nT {#1} { \tl_set:Nn \l__msz_cond_size_tl { big } }
       \bool_if:nT {#2} { \tl_set:Nn \l__msz_cond_size_tl { Big } }
@@ -997,12 +1041,13 @@
         { \__msz_script_tex:nN {#1} #5 }
     }
 
-  % parses the nine arguments, opens the call (applying the keys of an alias),
-  % selects the placement (adaptative XOR the + of the call), stores the
-  % scripts and builds the output. Kept apart from \zscript so the + fits.
+  % parses the nine arguments, opens the call (applying the keys of an alias
+  % and of local prefixes), selects the placement (adaptative XOR the + of the
+  % call), stores the scripts and builds the output. Kept apart from \zscript
+  % so the + fits.
   \NewDocumentCommand \__msz_script_main { s O{} s O{} m s O{} s O{} }
     {
-      \__msz_begin:
+      \__msz_begin:n { script }
       \bool_set:Nn \l__msz_script_adaptative_bool
         {
           \bool_xor_p:nn
@@ -1189,7 +1234,7 @@
 
   \NewDocumentCommand \zprime { s O{1} O{} O{} m }
     {
-      \__msz_begin:
+      \__msz_begin:n { prime }
       \ensuremath
         {
           \mathord
@@ -1356,7 +1401,7 @@
 
   \NewDocumentCommand \zlim { t+ s m s m }
     {
-      \__msz_begin:
+      \__msz_begin:n { lim }
       \IfBooleanTF {#1}
         { \tl_set:Nn \l__msz_lim_form_tl { script } }
         { \tl_set:Nn \l__msz_lim_form_tl { below } }
@@ -1643,7 +1688,7 @@
 
   \NewDocumentCommand \zint { s O{} s O{} s s O{1} }
     {
-      \__msz_begin:
+      \__msz_begin:n { int }
       \bool_if:nTF {#5}
         {
           \bool_if:nTF {#6}
@@ -1666,7 +1711,260 @@
       \group_end:
     }
 
-\ExplSyntaxOff
+% ==============================================================================
+% \zlocal {new} {commands} {key=value,...}
+% ------------------------------------------------------------------------------
+% Defines the prefix command <new>, with as many mandatory arguments as the
+% highest #n (n = 1..9) used in the values. <commands> is a list of command
+% names (with or without backslash) whose families receive the keys; empty =
+% all families. <new> stores its keys, per family, in \g__msz_local_<family>_tl
+% (see \__msz_begin:n), which the next call of a command of that family takes.
+% Stored keys are discarded unless the next token is a command with options, an
+% alias or another prefix (consecutive prefixes append their keys).
+%
+% Definition: the keys are validated and prefixed once for each family where
+% they exist (\KV@shorthand@... macros of xkeyval), giving a list
+% {family}{prefixed keys}... with the #n still in it. It becomes the body of
+% <new>, so TeX itself substitutes the arguments at each call. A prefix is
+% registered in \msz@local@<new>.
+%
+% The package predefines, right after \zlocal, the prefixes \zref {expr}
+% (zscript-reference) and \zwrapper {macro} (zscript-wrapper). They are
+% ordinary prefixes, so a user may redefine them.
+% ==============================================================================
+
+  \tl_new:N    \l__msz_local_new_tl
+  \tl_new:N    \l__msz_local_name_tl
+  \tl_new:N    \l__msz_local_peek_tl
+  \tl_new:N    \l__msz_local_key_tl
+  \tl_new:N    \l__msz_local_val_tl
+  \tl_new:N    \l__msz_local_tmp_tl
+  \tl_new:N    \l__msz_local_body_tl
+  \clist_new:N \l__msz_local_cmds_clist
+  \clist_new:N \l__msz_local_fams_clist
+  \bool_new:N  \l__msz_local_ok_bool
+  \bool_new:N  \l__msz_local_val_bool
+  \bool_new:N  \l__msz_local_found_bool
+  \int_new:N   \l__msz_local_n_int
+
+  \msg_new:nnn { math-shorthandz } { local-new }
+    {
+      #1~is~a~command~of~the~package~or~an~existing~macro,~so~
+      \c_backslash_str zlocal~cannot~define~it.
+    }
+  \msg_new:nnn { math-shorthandz } { local-cmd }
+    {
+      #1~is~not~a~command~of~the~package~with~options,~so~
+      \c_backslash_str zlocal~cannot~use~it.
+    }
+  \msg_new:nnn { math-shorthandz } { local-key }
+    {
+      Key~#1~does~not~exist~for~any~of~the~commands~given~to~
+      \c_backslash_str zlocal.
+    }
+
+  % discards the stored keys unless the next token, peeked by a prefix, is a
+  % command with options, an alias or another prefix; the token is put back
+  \cs_new_protected:Npn \__msz_local_check:
+    {
+      \token_if_cs:NTF \l_peek_token
+        { \__msz_local_check:N }
+        { \__msz_local_clear: }
+    }
+  \cs_new_protected:Npn \__msz_local_check:N #1
+    {
+      \tl_set:Nx \l__msz_local_peek_tl { \cs_to_str:N #1 }
+      \bool_if:nF
+        {
+          \cs_if_exist_p:c { msz@alias@cmd@ \l__msz_local_peek_tl }
+          || \cs_if_exist_p:c { msz@local@ \l__msz_local_peek_tl }
+          || (
+               \cs_if_exist_p:c { msz@cmd@ \l__msz_local_peek_tl }
+               && ! \tl_if_empty_p:c { msz@cmd@ \l__msz_local_peek_tl }
+             )
+        }
+        { \__msz_local_clear: }
+      #1
+    }
+
+  % appends the keys {family}{keys}... to the lists of their families, then
+  % checks the next token (quark loop over the pairs)
+  \cs_new_protected:Npn \__msz_local_push:n #1
+    {
+      \__msz_local_loop:nn #1 \q_recursion_tail \q_recursion_tail \q_recursion_stop
+      \bool_gset_true:N \g__msz_local_bool
+      \peek_remove_spaces:n { \peek_after:Nw \__msz_local_check: }
+    }
+  \cs_new_protected:Npn \__msz_local_loop:nn #1#2
+    {
+      \quark_if_recursion_tail_stop:n {#1}
+      \tl_gput_right:cn { g__msz_local_ #1 _tl } {#2}
+      \__msz_local_loop:nn
+    }
+
+  % defines the prefix #1 with #2 arguments and the body #3 (the list of
+  % {family}{keys} with #n in it, so TeX substitutes the arguments)
+  \cs_new_protected:Npn \__msz_local_def:Nnn #1#2#3
+    {
+      \int_case:nn {#2}
+        {
+          { 0 } { \cs_set_protected:Npn #1                                      { \__msz_local_push:n {#3} } }
+          { 1 } { \cs_set_protected:Npn #1 ##1                                  { \__msz_local_push:n {#3} } }
+          { 2 } { \cs_set_protected:Npn #1 ##1##2                               { \__msz_local_push:n {#3} } }
+          { 3 } { \cs_set_protected:Npn #1 ##1##2##3                            { \__msz_local_push:n {#3} } }
+          { 4 } { \cs_set_protected:Npn #1 ##1##2##3##4                         { \__msz_local_push:n {#3} } }
+          { 5 } { \cs_set_protected:Npn #1 ##1##2##3##4##5                      { \__msz_local_push:n {#3} } }
+          { 6 } { \cs_set_protected:Npn #1 ##1##2##3##4##5##6                   { \__msz_local_push:n {#3} } }
+          { 7 } { \cs_set_protected:Npn #1 ##1##2##3##4##5##6##7                { \__msz_local_push:n {#3} } }
+          { 8 } { \cs_set_protected:Npn #1 ##1##2##3##4##5##6##7##8             { \__msz_local_push:n {#3} } }
+          { 9 } { \cs_set_protected:Npn #1 ##1##2##3##4##5##6##7##8##9          { \__msz_local_push:n {#3} } }
+        }
+    }
+  \cs_generate_variant:Nn \__msz_local_def:Nnn { NnV }
+
+  % name of the command in item #1 of the list: without backslash
+  \cs_new:Npn \__msz_local_name:n #1
+    {
+      \tl_if_single_token:nTF {#1}
+        { \__msz_local_name_aux:N #1 }
+        {#1}
+    }
+  \cs_new:Npn \__msz_local_name_aux:N #1
+    { \token_if_cs:NTF #1 { \cs_to_str:N #1 } {#1} }
+
+  % adds the family of the command in item #1 to the list of families
+  \cs_new_protected:Npn \__msz_local_fam:n #1
+    {
+      \tl_set:Nx \l__msz_local_name_tl { \__msz_local_name:n {#1} }
+      \bool_lazy_and:nnTF
+        { \cs_if_exist_p:c { msz@cmd@ \l__msz_local_name_tl } }
+        { ! \tl_if_empty_p:c { msz@cmd@ \l__msz_local_name_tl } }
+        {
+          \tl_set_eq:Nc \l__msz_local_tmp_tl { msz@cmd@ \l__msz_local_name_tl }
+          \clist_if_in:NVF \l__msz_local_fams_clist \l__msz_local_tmp_tl
+            { \clist_put_right:NV \l__msz_local_fams_clist \l__msz_local_tmp_tl }
+        }
+        {
+          \bool_set_false:N \l__msz_local_ok_bool
+          \msg_error:nnx { math-shorthandz } { local-cmd } { \l__msz_local_name_tl }
+        }
+    }
+
+  % empties the list of keys of family #1 (created if needed)
+  \cs_new_protected:Npn \__msz_local_prep:n #1
+    {
+      \tl_clear_new:c { l__msz_local_k_ #1 _tl }
+      \tl_clear:c { l__msz_local_k_ #1 _tl }
+    }
+
+  % adds the prefixed key (and value) to the list of family #1 if the key
+  % exists there; the key and value are in \l__msz_local_key_tl and _val_tl
+  \cs_new_protected:Npn \__msz_local_one:n #1
+    {
+      \cs_if_exist:cT { KV@shorthand@z #1 - \l__msz_local_key_tl }
+        {
+          \bool_set_true:N \l__msz_local_found_bool
+          \bool_if:NTF \l__msz_local_val_bool
+            {
+              \tl_put_right:cx { l__msz_local_k_ #1 _tl }
+                {
+                  z #1 - \exp_not:V \l__msz_local_key_tl
+                  = { \exp_not:V \l__msz_local_val_tl } ,
+                }
+            }
+            {
+              \tl_put_right:cx { l__msz_local_k_ #1 _tl }
+                { z #1 - \exp_not:V \l__msz_local_key_tl , }
+            }
+        }
+    }
+
+  % keyval handlers: apply the key (and value) to every family, and report a
+  % key that exists in none
+  \cs_new_protected:Npn \__msz_local_apply:
+    {
+      \bool_set_false:N \l__msz_local_found_bool
+      \clist_map_function:NN \l__msz_local_fams_clist \__msz_local_one:n
+      \bool_if:NF \l__msz_local_found_bool
+        {
+          \bool_set_false:N \l__msz_local_ok_bool
+          \msg_error:nnx { math-shorthandz } { local-key } { \l__msz_local_key_tl }
+        }
+    }
+  \cs_new_protected:Npn \__msz_local_key:n #1
+    {
+      \tl_set:Nn \l__msz_local_key_tl {#1}
+      \bool_set_false:N \l__msz_local_val_bool
+      \__msz_local_apply:
+    }
+  \cs_new_protected:Npn \__msz_local_pair:nn #1#2
+    {
+      \tl_set:Nn \l__msz_local_key_tl {#1}
+      \tl_set:Nn \l__msz_local_val_tl {#2}
+      \bool_set_true:N \l__msz_local_val_bool
+      \__msz_local_apply:
+    }
+
+  % appends {family}{keys} of family #1 to the body, if it has any key
+  \cs_new_protected:Npn \__msz_local_body:n #1
+    {
+      \tl_if_empty:cF { l__msz_local_k_ #1 _tl }
+        {
+          \tl_set_eq:Nc \l__msz_local_tmp_tl { l__msz_local_k_ #1 _tl }
+          \tl_put_right:Nx \l__msz_local_body_tl
+            { { #1 } { \exp_not:V \l__msz_local_tmp_tl } }
+        }
+    }
+
+  % defines prefix #1 for the commands in #2 with keys #3
+  \cs_new_protected:Npn \__msz_local_define:Nnn #1#2#3
+    {
+      \tl_set:Nx \l__msz_local_new_tl { \cs_to_str:N #1 }
+      \bool_if:nTF
+        {
+          \cs_if_exist_p:c { msz@cmd@ \l__msz_local_new_tl }
+          ||
+          (
+            \cs_if_exist_p:N #1
+            && ! \cs_if_exist_p:c { msz@local@ \l__msz_local_new_tl }
+          )
+        }
+        { \msg_error:nnx { math-shorthandz } { local-new } { \token_to_str:N #1 } }
+        {
+          \bool_set_true:N \l__msz_local_ok_bool
+          \clist_clear:N \l__msz_local_fams_clist
+          \clist_set:Nn \l__msz_local_cmds_clist {#2}
+          \clist_if_empty:NTF \l__msz_local_cmds_clist
+            { \clist_set_eq:NN \l__msz_local_fams_clist \c__msz_fam_clist }
+            { \clist_map_function:NN \l__msz_local_cmds_clist \__msz_local_fam:n }
+          \bool_if:NT \l__msz_local_ok_bool
+            {
+              \clist_map_function:NN \l__msz_local_fams_clist \__msz_local_prep:n
+              \keyval_parse:NNn \__msz_local_key:n \__msz_local_pair:nn {#3}
+            }
+          \bool_if:NT \l__msz_local_ok_bool
+            {
+              \tl_clear:N \l__msz_local_body_tl
+              \clist_map_function:NN \l__msz_local_fams_clist \__msz_local_body:n
+              \int_zero:N \l__msz_local_n_int
+              \int_step_inline:nn { 9 }
+                {
+                  \regex_match:nVT { \cP. \cO[##1] } \l__msz_local_body_tl
+                    { \int_set:Nn \l__msz_local_n_int {##1} }
+                }
+              \__msz_local_def:NnV #1 { \int_use:N \l__msz_local_n_int }
+                \l__msz_local_body_tl
+              \tl_set:cn { msz@local@ \l__msz_local_new_tl } { }
+            }
+        }
+    }
+
+  \NewDocumentCommand \zlocal { m m m }
+    { \__msz_local_define:Nnn #1 {#2} {#3} }
+
+  % predefined prefixes for the options of \zscript most often set per call
+  \zlocal{\zref}{zscript}{reference=#1}
+  \zlocal{\zwrapper}{zscript}{wrapper=#1}
 
 % ==============================================================================
 % \zalias {new} {base} {key=value,...}
@@ -1675,17 +1973,14 @@
 % same arguments, but the keys apply during each call. The prefix of the
 % base's family is prepended to every key, so only its options can change;
 % `reset` (key) and \zreset (value) restore options from the snapshot taken
-% by the outermost enclosing alias call of the family.
+% by the outermost enclosing call of the family.
 %
-% Registry: \msz@cmd@<command> holds the family of each package command
-% (empty: no options). An alias <new> stores its root command in
-% \msz@alias@cmd@<new> and its flattened, prefixed key list (the keys of its
-% base first) in \msz@alias@keys@<new>. The alias macro hands the list and the
-% family to \g__msz_alias_tl / \g__msz_alias_fam_tl and calls the root
-% command, whose \__msz_begin: consumes them.
+% Registry (see GLOBAL): \msz@cmd@<command> holds the family of each package
+% command. An alias <new> stores its root command in \msz@alias@cmd@<new> and
+% its flattened, prefixed key list (the keys of its base first) in
+% \msz@alias@keys@<new>. The alias macro hands the list to \g__msz_alias_tl
+% and calls the root command, whose \__msz_begin:n consumes it.
 % ==============================================================================
-
-\ExplSyntaxOn
 
   \tl_new:N \l__msz_alias_new_tl
   \tl_new:N \l__msz_alias_base_tl
@@ -1693,14 +1988,6 @@
   \tl_new:N \l__msz_alias_fam_tl
   \tl_new:N \l__msz_alias_prefix_tl
   \tl_new:N \l__msz_alias_keys_tl
-
-  \tl_const:cn { msz@cmd@zline } { line }
-  \tl_const:cn { msz@cmd@zvec  } { line }
-  \tl_const:cn { msz@cmd@zmat  } { line }
-  \clist_map_inline:nn { zscale, zdot, zarg, zdiff, zcond, zscript, zprime, zlim, zint }
-    { \tl_const:cx { msz@cmd@ #1 } { \str_tail:n {#1} } }
-  \clist_map_inline:nn { zpunct, zfrac, zalias, zreset }
-    { \tl_const:cn { msz@cmd@ #1 } { } }
 
   \msg_new:nnn { math-shorthandz } { alias-new }
     {
@@ -1779,8 +2066,6 @@
                 {
                   \exp_not:N \tl_gset:Nn \exp_not:N \g__msz_alias_tl
                     { \exp_not:V \l__msz_alias_keys_tl }
-                  \exp_not:N \tl_gset:Nn \exp_not:N \g__msz_alias_fam_tl
-                    { \exp_not:V \l__msz_alias_fam_tl }
                   \exp_not:c { \l__msz_alias_cmd_tl }
                 }
             }
