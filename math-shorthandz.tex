@@ -361,7 +361,7 @@ The following example compares \cs{zvec} and \cs{zmat} with the \textsf{ulem} an
   \nl
   \zline[3]{W}                                        % triple underline
   \nl
-  $\zline{x^2} \ne \zline{x}^2$                       % composition
+  $\zline{x_b^2} \ne \zline{x}_b^2$                   % composition
 \end{tcblisting}
 
 % ------------------------------------------------------------------------------
@@ -1988,25 +1988,50 @@ The \cs{zalias} utility defines a new command based on one of the package comman
 
 The list \macroMeta{key=value,\dots} contains option names and values, which are validated during definition. The \macroMeta{key} is automatically prepended with the option prefix of the \macroMeta{base} family (\eg \opt{zscript-} for \cs{zscript}; \cs{zvec} and \cs{zmat} use \opt{zline-}). This guards \cs{zalias} against changing the options of an unrelated command. Listed key-value pairs are changed inside a dedicated group, so unlisted options continue using the values defined outside the definition (usually the package defaults). An alias may be based on another alias and may be redefined at any point, but all definitions are frozen. A later redefinition of an alias does not update its sub-aliases already based on it. An existing macro, including every command of the package, cannot be overwritten.
 
-The following example defines an alias to address the same case presented in Section~\ref{ss:zscript}:
+The following examples use \cs{zalias} to address the same case presented in Section~\ref{ss:zscript}, as well as demonstrate possible strategies to adjust low subscripts caused by symbol underlining:
 \begin{tcblisting}{
     math-shorthandz-tex,
     halign lower=center,
-    lefthand width=0.8\linewidth
+    lefthand width=0.75\linewidth
   }
   \zalias{\zscriptA}{\zscript}{reference=A}
-  \nl[1.5]
+  \zalias{\zscriptMid}{\zscript}{math-lr-v=1, text-lr-v=1}
+  \zalias{\zscriptHigh}{\zscript}{math-lr-v=1.6, text-lr-v=1.6}
+  \nl[3.5]
   \begin{gather*}
     \zscript{A}[][base] \ne \zscript{\tilde{A}}[][high]
     \nl[0.5]
-    \zscript{A}[][base] = \zscriptA{\tilde{A}}[][base]
+    \zscript{A}[][base] =  \zscriptA{\tilde{A}}[][base]
+    \nl[0.1]
+    \nl[0.1]
+                     \zmat{X_\text{b}}  \ne          \zmat{X}_\text{b}
+    \nl[0.5]
+                 \zmat{\zscript{X}[b]}  \ne      \zscript{\zmat{X}}[b]
+    \nl[0.5]  
+              \zmat{\zscriptMid{X}[b]}  \ne   \zscriptMid{\zmat{X}}[b]
+    \nl[0.5] 
+             \zmat{\zscriptHigh{X}[b]}  \ne  \zscriptHigh{\zmat{X}}[b]
   \end{gather*}
 \end{tcblisting}
 
 \macroDescription{\zreset}
 Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it. Both also work in the keys of \cs{zlocal}, whose values may be \cs{zreset} or contain it in an argument, as the last example below shows.
 
-The following example shows the inheritance, and how an inner alias with \cs{zreset} avoids it:
+The following example shows that \opt{reset} only affects the keys before it:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.73\linewidth
+  }
+  \zalias{\zscriptUndo}{\zscript}{text-lr-v=-1, reset}
+  \zalias{\zscriptKeep}{\zscript}{reset, text-lr-v=-1}
+  \nl[4]
+  $
+    \zscript{A}[base] = \zscriptUndo{A}[base] \ne \zscriptKeep{A}[low]
+  $
+\end{tcblisting}
+
+and these show the inheritance and how an inner alias with \cs{zreset} avoids it:
 \begin{tcblisting}{
     math-shorthandz-tex,
     halign lower=center,
@@ -2025,20 +2050,6 @@ The following example shows the inheritance, and how an inner alias with \cs{zre
   \nl[0.5]
   \nl[0.5]
   $ \zscriptLow{x}[\zscriptLow{k}[b]] \ne \zscriptLow{x}[\zscriptRaw{k}[b]] $
-\end{tcblisting}
-
-The following example shows that \opt{reset} only affects the keys before it:
-\begin{tcblisting}{
-    math-shorthandz-tex,
-    halign lower=center,
-    lefthand width=0.73\linewidth
-  }
-  \zalias{\zscriptUndo}{\zscript}{text-lr-v=-1, reset}
-  \zalias{\zscriptKeep}{\zscript}{reset, text-lr-v=-1}
-  \nl[4]
-  $
-    \zscript{A}[base] = \zscriptUndo{A}[base] \ne \zscriptKeep{A}[low]
-  $
 \end{tcblisting}
 
 The restored value is the one acting where the outermost alias is called, not one of the intermediate aliases:
@@ -2082,7 +2093,7 @@ and the restored value is also not the one at definition:
   }
 \end{tcblisting}
 
-Finally, the prefix values are applied inside the group of the call after the keys of an alias. So a prefix wins when alongside an alias, and can undo its option for call:
+Finally, when using \cs{zlocal}, the prefix values are applied inside the group of the call after the keys of an alias. So a prefix wins when alongside an alias, and can undo its option for call:
 \begin{tcblisting}{
     math-shorthandz-tex,
     halign lower=center,
