@@ -1,0 +1,67 @@
+name: CTAN upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag to upload (e.g. v1.1.0)"
+        required: true
+      send:
+        description: "Really send to CTAN (false = validate only)"
+        type: boolean
+        default: false
+
+jobs:
+  ctan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: teatimeguest/setup-texlive-action@v3
+        with:
+          packages: |
+            scheme-basic
+            l3build
+            luatex
+            luaotfload
+            fontspec
+            unicode-math
+            lm-math
+            xits
+            tex-gyre-math
+            units
+            xkeyval
+            xcolor
+            graphics
+            amsmath
+            hypdoc
+            hyperref
+            listings
+            booktabs
+            ulem
+            microtype
+            enumitem
+            parskip
+            geometry
+            metalogo
+            tools
+            tcolorbox
+            pgf
+            caption
+            makeindex
+
+      - name: Build the CTAN archive
+        run: l3build ctan
+
+      - name: Validate (nothing is sent)
+        env:
+          CTAN_EMAIL: ${{ secrets.CTAN_EMAIL }}
+        run: l3build upload --debug
+
+      - name: Upload to CTAN
+        if: inputs.send
+        env:
+          CTAN_EMAIL: ${{ secrets.CTAN_EMAIL }}
+        run: l3build upload

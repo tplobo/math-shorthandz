@@ -122,42 +122,55 @@ lists every version, newest first.
 
 ### Releasing a new version
 
-Maintainers only. Replace `vX.Y.Z` by the new version.
+Maintainers only. Replace `vX.Y.Z` by the new version and `YYYY-MM-DD` by the
+release date. Releases are tagged on the `development` branch.
 
-1.  Make sure the working tree is clean and on the main branch.
+1.  Make sure the working tree is clean and on `development`.
 2.  Add the `vX.Y.Z` entry to the Change History in `math-shorthandz.tex`
     (`l3build tag` does not touch it).
-3.  Update version and date in `math-shorthandz.sty` and in the manual title:
+3.  Update version and date in `math-shorthandz.sty` and in the manual title
+    (options go before the tag name):
 
-    l3build tag vX.Y.Z
+    l3build tag --date YYYY-MM-DD vX.Y.Z
 
 4.  Build the manual and check the log for errors and warnings:
 
     l3build doc
 
-5.  Commit and tag:
+5.  Commit, tag and push. Pushing the tag runs the GitHub workflow
+    `release.yml`, which builds the archive and creates the GitHub release; it
+    never contacts CTAN:
 
     git add -A
     git commit -m "Release vX.Y.Z"
     git tag -a vX.Y.Z -m "math-shorthandz vX.Y.Z"
-    git push origin main
+    git push origin development
     git push origin vX.Y.Z
 
-6.  Build the CTAN archive:
+6.  Build the CTAN archive locally:
 
     l3build ctan
 
 7.  Validate the upload without sending it (`CTAN_EMAIL` must hold the uploader
-    address, or pass `--email`). For updates, replace the announcement with
-    `-m "text"` or `-F file`; the default in `build.lua` is the text of the first
-    release:
+    address, or pass `--email`). `--debug` prints the form, including the
+    archive in base64, so cut the lines to read it. For updates, give the
+    announcement with `-m "text"` or `-F file`; the default in `build.lua` is
+    the text of the first release:
 
         export CTAN_EMAIL=you@example.org
-        l3build upload --debug
+        l3build upload --debug -m "text" | cut -c1-160
 
-8.  Upload:
+8.  Upload (CTAN emails a confirmation link before publishing):
 
-    l3build upload
+    l3build upload -m "text"
+
+    Alternatively, run the manual workflow `ctan.yml` from the Actions tab: it
+    validates by default and only sends when `send` is checked.
+
+If a mistake shows up after tagging but before the CTAN upload, delete the
+GitHub release, then move the tag (`git tag -fa vX.Y.Z`,
+`git push -f origin vX.Y.Z`). Once CTAN has accepted a version, release
+vX.Y.(Z+1) instead.
 
 ## License
 

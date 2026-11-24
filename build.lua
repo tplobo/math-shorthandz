@@ -40,6 +40,7 @@ local repository = "https://github.com/tplobo/math-shorthandz"
 uploadconfig = {
   pkg          = module,
   version      = pkgversion,
+  update       = true,
   author       = "Tiago Pomella Lobo",
   uploader     = "Tiago Pomella Lobo",
   maintainer   = "Tiago Pomella Lobo",
