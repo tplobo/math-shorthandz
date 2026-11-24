@@ -717,6 +717,11 @@ Starring:
 
 \begin{macroTable}{tb:zdiff}{Options for \cs{zdiff}.}
 
+    \opt{zdiff-symbol}
+        & \optval{diff\@symbol}
+        & Symbol printed in the differential and in both derivative layouts (\eg{} \cs{partial}, as in \cs{zdell} below).
+    \\
+
     \opt{zdiff-math-separation}
         & \optval{diff\@math\@separation}
         & Extra kern inserted before "d" in differential form when \cs{zdiff} is called with a leading \macroPlus\ in display math style. It is \textit{added} to the thin space that \TeX\ already applies.
@@ -774,6 +779,26 @@ A leading \macroPlus, meaningful only in differential form, adds a kern before t
     \quad \ne \quad
     \int f\zarg{\vec{x}} \zdiff+[2]{x}    % spaced
   \end{gather*}
+\end{tcblisting}
+
+\macroDescription{\zdell}
+For partial differentials and derivatives, the package provides the variant \cs{zdell}, which takes the same arguments, stars and leading \macroPlus\ as \cs{zdiff} and prints $\partial$ instead of d.\footnote{It is a predefined alias of \cs{zdiff}; see Section~\ref{ss:aliases}.}
+
+\begin{syntax}
+  \cs{zdell}\macroPlus\macroStar\macroStar\macroOpt{order}\macroArg{var}
+\end{syntax}
+
+The following example prints a partial differential, a higher-order one, and the two partial-derivative layouts:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    lefthand width=0.7\linewidth,
+    halign lower=center,
+  }
+  $\zdell{x} \ne \zdell[2]{x}$              % partial differential
+  \nl
+  $\zdell*{x}f \ne \zdell*[2]{x}f$          % derivative, \frac
+  \nl
+  $\zdell**{x}(f) \ne \zdell**[2]{x}(f)$    % derivative, \nicefrac
 \end{tcblisting}
 
 % ------------------------------------------------------------------------------
@@ -1048,19 +1073,35 @@ The following examples show scripts in text and math modes, with and without sca
   Subsequent line, no overlap.
 \end{tcblisting}
 
-Every script is wrapped in \opt{zscript-wrapper}, which may be any macro taking one argument (\eg{} \cs{textit}). The nucleus is never wrapped. Three settings for the option are recommended; they differ in usage procedure for each type of script (variables, math symbols, labels, un/signed numbers):
+Every script is wrapped in \opt{zscript-wrapper}, which may be any macro taking one argument (\eg{} \cs{textit}). This generally allows scripts to be descriptive labels instead of other variables (see below). But the nucleus is never wrapped, not even when the call sits inside a script of another \cs{zscript} call. This is because a nested \cs{zscript} call generally still stands for a(nother) variable. So, its nucleus is set back in the default math alphabet instead of inheriting the wrapper of the outer script.
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.72\linewidth
+  }
+  \nl[3]
+  \[
+    \zscript{k}[v]                      % label "v", most common use
+    \ne
+    \zscript{k}[\zscript{v}[b]]         % variable "v_b", also common
+    \ne
+    \zscript{k}[\zscript{\text{v}}[b]]  % label "v_b", uncommon
+  \]
+\end{tcblisting}
+
+Three settings for the wrapper option are recommended; they differ in usage procedure for each type of script (variables, math symbols, labels, un/signed numbers):
 \begin{itemize}[nosep]
   \item \cs{symup} (default, compact) — math symbols, digits and signs are allowed and do not require \texttt{\$}\ldots\texttt{\$} wrapping, since the script is already in math mode. Variables must be written as \cs{symit}\macroArg{variable} to not show as text. Some labels must be written as \cs{text}\macroArg{label} (since, without it, \eg spaces are ignored, hyphens become minus signs, \etc). This is the default because descriptive labels tend to be the most common type of script.
   \item \cs{text} (standard) — all labels are allowed (with spaces, hyphens, \etc). Variables, math symbols and signs must be wrapped by \texttt{\$}\ldots\texttt{\$}, exactly as inside \cs{text}. This may become cumbersome when scripts tend to show math symbols and signs (\eg exponents).
   \item empty (plain) — scripts are set in the ambient math alphabet, as plain \TeX\ does, for full control. All labels must be written \cs{text}\macroArg{label}.
 \end{itemize}
-
 The following examples demonstrate the outputs for each recommendation, and comment on what is unwanted in each application:
 \begin{tcblisting}{
     math-shorthandz-tex,
     halign lower=center,
     lefthand width=0.72\linewidth
   }
+  \nl[3]
   \[
     \zscript[\mu][\symit{p}]{R}[pre\text{-}ion][-1]
     \ne
@@ -1459,7 +1500,7 @@ The following example compares the two layouts, a one-sided limit, and scaled pa
   \end{gather*}
 \end{tcblisting}
 
-The output box keeps neighbouring lines apart in text and inline math, and the plus keeps the operator compact there; the following example shows a derivative defined as a limit, tightened with a negative \opt{zlim-math-after}:
+The output box keeps neighbouring lines apart in text and inline math, and the plus keeps the operator compact there; the following example shows a derivative defined as a limit, increased with a positive \opt{zlim-math-after}:
 \begin{tcblisting}{
     math-shorthandz-tex,
     lefthand width=0.65\linewidth,
@@ -1943,9 +1984,35 @@ The \cs{zlocal} utility defines a prefix command that changes options for the ne
 
 The list \macroMeta{commands} contains names of package commands that have options, with (\eg \cs{zscript}, \cs{zlim}) or without backslash (\eg \opt{zscript}, \opt{zlim}). If \macroMeta{commands} is empty, all commands are used. The \macroMeta{key} is automatically prepended with the option prefix of each listed command, so a key that the commands share (\eg the frame options) changes all of them; a key that is missing for some commands is skipped for them. Every key must exist in at least one command, which is validated during definition. The values may contain \texttt{\#1}, \dots, \texttt{\#9}, which become the arguments of \macroMeta{new}, as many as the highest one used. An existing macro (including the package commands) cannot be overwritten, but \macroMeta{new} can be redefined. A prefix must be placed directly before the command it changes. If it is followed by anything else, it is discarded, so it can never leak into a later call. Consecutive prefixes add up, and the last one wins for an option set twice. Commands of the same kind typeset inside the arguments inherit the values.
 
+For convenience, the package predefines some prefixes, as shown below.
+
+\macroDescription{\zbefore}
+\macroDescription{\zafter}
+The prefixes \cs{zbefore} and \cs{zafter} set the options for common adjustments, the space before or after the output of \cs{zscript}, \cs{zprime}, \cs{zlim} and \cs{zint}. They are equivalent to \cs{zlocal}\texttt{\{\textbackslash zbefore\}\{zscript, zprime, zlim, zint\}\{math-before=\#1, text-before=\#1\}} and \cs{zlocal}\texttt{\{\textbackslash zafter\}\{zscript, zprime, zlim, zint\}\{math-after=\#1, text-after=\#1\}}, and, as any prefix, can be redefined.
+\begin{syntax}
+  \cs{zbefore}\macroArg{ratio} \qquad \cs{zafter}\macroArg{ratio}
+\end{syntax}
+The following examples push an integrand farther from the integral, and give a pre-indexed nuclide room from its coefficient:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.65\linewidth
+  }
+  \nl[2]
+  \begin{gather*}
+    \zint[0][{+\infty}] \zfrac{x} \zdiff+{x}
+    \ne
+    \zafter{0.3}\zint[0][{+\infty}] \zfrac{x} \zdiff+{x}
+    \nl
+    2\zscript[4][2]{\mathrm{He}}
+    \ne
+    2\zbefore{0.3}\zscript[4][2]{\mathrm{He}}
+  \end{gather*}
+\end{tcblisting}
+
 \macroDescription{\zref}
 \macroDescription{\zwrapper}
-For convenience, the package predefines the prefixes \cs{zref} and \cs{zwrapper}, which set the options \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript} (see Section~\ref{ss:zscript}). They are equivalent to \cs{zlocal}\texttt{\{\textbackslash zref\}\{zscript\}\{reference=\#1\}} and \cs{zlocal}\texttt{\{\textbackslash zwrapper\}\{zscript\}\{wrapper=\#1\}}, and, as any prefix, can be redefined.
+The prefixes \cs{zref} and \cs{zwrapper} set the options \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript} (see Section~\ref{ss:zscript}). They are equivalent to \cs{zlocal}\texttt{\{\textbackslash zref\}\{zscript\}\{reference=\#1\}} and \cs{zlocal}\texttt{\{\textbackslash zwrapper\}\{zscript\}\{wrapper=\#1\}}, and, as any prefix, can be redefined.
 \begin{syntax}
   \cs{zref}\macroArg{expr} \qquad \cs{zwrapper}\macroArg{macro}
 \end{syntax}
@@ -1973,8 +2040,10 @@ The following examples use \cs{zref} to address the same case presented in Secti
   \end{gather*}
 \end{tcblisting}
 
+
+
 % ------------------------------------------------------------------------------
-\clearpage
+%\clearpage
 \subsection{Aliases}
 \label{ss:aliases}
 % ------------------------------------------------------------------------------
@@ -2014,8 +2083,27 @@ The following examples use \cs{zalias} to address the same case presented in Sec
   \end{gather*}
 \end{tcblisting}
 
+When using \cs{zlocal}, the prefix values are applied inside the group of the call after the keys of an alias. So a prefix wins when alongside an alias, and can undo its option for call:
+\begin{tcblisting}{
+    math-shorthandz-tex,
+    halign lower=center,
+    lefthand width=0.7\linewidth
+  }
+  \zalias{\zscriptLow}{\zscript}{math-lr-v=-1}
+  \zlocal{\zlr}{zscript}{math-lr-v=#1}
+  \nl[4]
+  \begin{gather*}
+                \zscript{x}[base]
+    \ne         \zscriptLow{x}[low]
+    \ne \zlr{-2}\zscriptLow{x}[lower]
+    \nl[0.5]
+                     \zscriptLow{x}[low]
+    \ne \zlr{\zreset}\zscriptLow{x}[base]
+  \end{gather*}
+\end{tcblisting}
+
 \macroDescription{\zreset}
-Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it. Both also work in the keys of \cs{zlocal}, whose values may be \cs{zreset} or contain it in an argument, as the last example below shows.
+Since option values are applied around the whole call, they are inherited by nested calls of the same base command. The macro \cs{zreset} restores the value an option had when the \textit{outermost} enclosing alias call began (or current values, if there is none). That call takes a snapshot of its command's options before applying its own keys, and nested alias calls keep it; \ie the restored values follow the \cs{setkeys} and groups around the place where the alias is \textit{called}, not where it was defined, at any nesting depth. A \cs{setkeys} inside the arguments of the call is not part of the snapshot. Alternatively, the key \opt{reset} does the same for all options of the base command at once. Keys are applied in order, so \opt{reset} only undoes the keys that precede it. Both also work in the keys of \cs{zlocal}, whose values may be \cs{zreset} or contain it in an argument, as the examples below show.
 
 The following example shows that \opt{reset} only affects the keys before it:
 \begin{tcblisting}{
@@ -2061,13 +2149,16 @@ The restored value is the one acting where the outermost alias is called, not on
   \zalias{\zscriptLow}{\zscript}{text-lr-v=-3}
   \zalias{\zscriptHigh}{\zscript}{text-lr-v=3}
   \zalias{\zscriptRaw}{\zscript}{text-lr-v=\zreset}
-  \nl[4]
-  $ \zscript{x}[\zscript{base}[\zscript{y}[base]]] $
+  \newcommand{\high}{\text{high}}
+  \newcommand{\base}{\text{base}}
+  \newcommand{\low}{\text{low}}
+  \nl[7]
+  $ \zscript{x}[\zscript{\base}[\zscript{y}[base]]] $
   \nl[2]
   $
-    \zscriptHigh{x}[\zscriptLow{high}[\zscript{y}[low]]]
+    \zscriptHigh{x}[\zscriptLow{\high}[\zscript{y}[low]]]
     \ne
-    \zscriptHigh{x}[\zscriptLow{high}[\zscriptRaw{y}[base]]]
+    \zscriptHigh{x}[\zscriptLow{\high}[\zscriptRaw{y}[base]]]
   $
 \end{tcblisting}
 
@@ -2080,36 +2171,20 @@ and the restored value is also not the one at definition:
   \zalias{\zscriptLow}{\zscript}{text-lr-v=-3}
   \zalias{\zscriptHigh}{\zscript}{text-lr-v=3}
   \zalias{\zscriptRaw}{\zscript}{text-lr-v=\zreset}
-  \nl[4]
-  $ \zscript{x}[\zscript{base}[\zscript{base}[base]]] $
+  \newcommand{\high}{\text{high}}
+  \newcommand{\base}{\text{base}}
+  \newcommand{\low}{\text{low}}
+  \nl[7]
+  $ \zscript{x}[\zscript{\base}[\zscript{\base}[base]]] $
   \nl[4]
   {
     \setkeys{shorthand}{zscript-text-lr-v=0}
     $
-      \zscriptHigh{x}[\zscriptLow{high}[\zscript{low}[low]]]
+      \zscriptHigh{x}[\zscriptLow{\high}[\zscript{\low}[low]]]
       \ne
-      \zscriptHigh{x}[\zscriptLow{high}[\zscriptRaw{low}[base]]]
+      \zscriptHigh{x}[\zscriptLow{\high}[\zscriptRaw{\low}[base]]]
     $
   }
-\end{tcblisting}
-
-Finally, when using \cs{zlocal}, the prefix values are applied inside the group of the call after the keys of an alias. So a prefix wins when alongside an alias, and can undo its option for call:
-\begin{tcblisting}{
-    math-shorthandz-tex,
-    halign lower=center,
-    lefthand width=0.7\linewidth
-  }
-  \zalias{\zscriptLow}{\zscript}{math-lr-v=-1}
-  \zlocal{\zlr}{zscript}{math-lr-v=#1}
-  \nl[4]
-  \begin{gather*}
-                \zscript{x}[base]
-    \ne         \zscriptLow{x}[low]
-    \ne \zlr{-2}\zscriptLow{x}[lower]
-    \nl[0.5]
-                     \zscriptLow{x}[low]
-    \ne \zlr{\zreset}\zscriptLow{x}[base]
-  \end{gather*}
 \end{tcblisting}
 
 
@@ -2286,20 +2361,24 @@ Finally, when using \cs{zlocal}, the prefix values are applied inside the group 
       \item \textbf{Warning: breaking change in a minor release.} The keys of \cs{zscale} were renamed from \opt{scale-}\macroMeta{style} and \opt{scale-absolute} to \opt{zscale-}\macroMeta{style} and \opt{zscale-absolute}. They were a typo against the rule that every key carries the full name of its command, and the version is bumped to v1.1.0 instead of v2.0.0 for that reason only, but it \textit{does} break existing documents: replace the old keys, in \cs{usepackage} and in \cs{setkeys}; no alias is kept.
 
       \item \textbf{Scale keys.} The keys \opt{scale-}\macroMeta{style} used to live in a global section of the package because \cs{zscale} had a scaling shared by all commands. Since every command now owns its four factors and switch, that distinction was gone, and the keys were moved to the section of \cs{zscale}, where they belong.
+      
+      \item \textbf{Package options.} The subsection on options became part of a new \textit{Package options} section, with the subsections \textit{Global options} (moved from the user interface), \textit{Local options} and \textit{Aliases}.
+      
+      \item \textbf{Declaration of options.} All options are now declared by one generator in the global section, instead of one helper per command or by hand, with unchanged macro names and defaults. The generator also registers every option of each command, which is what \cs{zlocal} and \cs{zalias} use to take snapshots and to apply \opt{reset}.
 
       \item \cs{zlocal}: new command that defines prefix commands, which change options for the next call of a command only. They take up to nine arguments, can change the options of several commands at once, add up when combined and are applied after the keys of an alias. A prefix that is not followed by a command with options is discarded.
 
-      \item \cs{zref}, \cs{zwrapper}: new prefixes, predefined with \cs{zlocal}, that set \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript}. Like any prefix, they can be redefined.
+      \item \cs{zbefore}, \cs{zafter}: new prefixes, predefined with \cs{zlocal}, that set the spacing before and after the output of \cs{zscript}, \cs{zprime}, \cs{zlim} and \cs{zint}.
+      
+      \item \cs{zref}, \cs{zwrapper}: new prefixes, predefined with \cs{zlocal}, that set \opt{zscript-reference} and \opt{zscript-wrapper} for the next call of \cs{zscript}.
 
       \item \cs{zalias}: new command that defines variants of any command with options, with their own option values. The key prefix of the base command is prepended automatically, so an alias cannot change other commands' options. Aliases may be based on other aliases, may be redefined, and never overwrite a command of the package. The value \cs{zreset} and the key \opt{reset} restore options to the values they had when the outermost enclosing alias call began.
+      
+      \item \cs{zdell}: alias of \cs{zdiff}, created with the new option \opt{zdiff-symbol}.
 
-      \item \textbf{Package options.} The subsection on options became part of a new \textit{Package options} section, with the subsections \textit{Global options} (moved from the user interface), \textit{Local options} and \textit{Aliases}.
-
-      \item \cs{zscript}: new option \opt{zscript-reference}, a math expression whose edges, instead of the printed nucleus's, define the positions of all scripts, so that a decorated nucleus (\eg{} $\tilde{\Psi}$) takes its scripts where the bare one does. The leading \macroPlus\ is now resolved after the keys of an alias are applied.
+      \item \cs{zscript}: new option \opt{zscript-reference}, a math expression whose edges, instead of the printed nucleus's, define the positions of all scripts, so that a decorated nucleus (\eg{} $\tilde{\Psi}$) takes its scripts where the bare one does. The leading \macroPlus\ is now resolved after the keys of an alias are applied. The nucleus of a nested \cs{zscript} is never wrapped.
 
       \item \cs{zcond}: the condition is now scaled through its own options \opt{zcond-scale-}\macroMeta{style}, \opt{zcond-scale-absolute} and the new switch \opt{zcond-scale-star}, keyed to the math style of the bar. By default the output is essentially unchanged.
-
-      \item \textbf{Declaration of options.} All options are now declared by one generator in the global section, instead of one helper per command or by hand, with unchanged macro names and defaults. The generator also registers every option of each command, which is what \cs{zlocal} and \cs{zalias} use to take snapshots and to apply \opt{reset}.
 
     \end{itemize}
 

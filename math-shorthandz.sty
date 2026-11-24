@@ -17,7 +17,10 @@
 %   \zlocal   prefix commands that change options for the next call only
 %   \zref     predefined prefix: `zscript-reference` for the next \zscript
 %   \zwrapper predefined prefix: `zscript-wrapper` for the next \zscript
+%   \zbefore  predefined prefix: `before` of the next zscript/zprime/zlim/zint
+%   \zafter   predefined prefix: `after` of the next zscript/zprime/zlim/zint
 %   \zalias   variants of the commands above with their own option values
+%   \zdell    predefined alias of \zdiff for partial differentials/derivatives
 %
 % Dependencies:
 %   amsmath, unicode-math, graphicx, nicefrac, xkeyval
@@ -681,8 +684,11 @@
 % No star: differential, a \mathinner atom (a leading + adds the kern
 % `zdiff-math-separation` in display style, `zdiff-text-separation` otherwise).
 % One star: derivative as \frac, followed by `zdiff-kern`; two: as \nicefrac.
+% The letter printed is `zdiff-symbol` (d by default); the predefined alias
+% \zdell (see \zalias) sets it to \partial.
 % ==============================================================================
 
+  \msz@opt{diff}{symbol}{symbol}{\text{d}}
   \msz@opt{diff}{math-separation}{math@separation}{10mu}
   \msz@opt{diff}{text-separation}{text@separation}{5mu}
   \msz@opt{diff}{kern}{kern}{2mu}
@@ -699,13 +705,13 @@
               \IfBooleanTF {#3}
                 {
                   \nicefrac
-                    { \text{d} \tl_if_blank:nF {#4} { ^{#4} } }
-                    { \text{d} #5 \tl_if_blank:nF {#4} { ^{#4} } }
+                    { \msz@diff@symbol \tl_if_blank:nF {#4} { ^{#4} } }
+                    { \msz@diff@symbol #5 \tl_if_blank:nF {#4} { ^{#4} } }
                 }
                 {
                   \frac
-                    { \text{d} \tl_if_blank:nF {#4} { ^{#4} } }
-                    { \text{d} #5 \tl_if_blank:nF {#4} { ^{#4} } }
+                    { \msz@diff@symbol \tl_if_blank:nF {#4} { ^{#4} } }
+                    { \msz@diff@symbol #5 \tl_if_blank:nF {#4} { ^{#4} } }
                 }
               \mkern \msz@diff@kern
             }
@@ -720,7 +726,7 @@
                         { \mkern \msz@diff@text@separation }
                         { \mkern \msz@diff@text@separation }
                     }
-                  \text{d} \tl_if_blank:nF {#4} { ^{#4} } #5
+                  \msz@diff@symbol \tl_if_blank:nF {#4} { ^{#4} } #5
                 }
             }
         }
@@ -846,6 +852,7 @@
 
   \tl_new:N  \l__msz_script_mode_tl
   \tl_new:N  \l__msz_script_ctx_tl
+  \tl_new:N  \l__msz_script_nuc_tl
 
   \dim_new:N \l__msz_script_off_dim
   \dim_new:N \l__msz_script_left_dim
@@ -855,9 +862,11 @@
   \box_new:N \l__msz_script_ref_box
   \box_new:N \l__msz_script_out_box
 
-  % placement of the current call (true: from edges) and the + of the call
+  % placement of the current call (true: from edges), the + of the call, and
+  % whether the call sits inside a script of another \zscript
   \bool_new:N \l__msz_script_adaptative_bool
   \bool_new:N \l__msz_script_plus_bool
+  \bool_new:N \l__msz_script_nested_bool
 
   % per-script storage for ll, ul, lr, ur: token list (empty = absent), star
   % flag, box, x of its left edge from the reference's left edge, raise
@@ -886,9 +895,13 @@
         }
     }
 
-  % content of script #1 in style #2: a scaled box if starred, else itself
+  % content of script #1 in style #2: a scaled box if starred, else itself.
+  % Flags everything typeset inside as nested (local to the box or group that
+  % holds it), so a \zscript there restores the default alphabet for its
+  % nucleus, which is a variable, not part of the script's label
   \cs_new_protected:Npn \__msz_script_content:nN #1#2
     {
+      \bool_set_true:N \l__msz_script_nested_bool
       \bool_if:cTF { l__msz_script_ #1 _star_bool }
         {
           \__msz_scale:nnnnN { } { \tl_use:c { l__msz_script_ #1 _tl } }
@@ -1043,8 +1056,9 @@
 
   % parses the nine arguments, opens the call (applying the keys of an alias
   % and of local prefixes), selects the placement (adaptative XOR the + of the
-  % call), stores the scripts and builds the output. Kept apart from \zscript
-  % so the + fits.
+  % call), stores the scripts and builds the output. The nucleus is set in the
+  % default alphabet when the call is nested in a script. Kept apart from
+  % \zscript so the + fits.
   \NewDocumentCommand \__msz_script_main { s O{} s O{} m s O{} s O{} }
     {
       \__msz_begin:n { script }
@@ -1054,6 +1068,9 @@
             { \str_if_eq_p:Vn \msz@script@adaptative { true } }
             { \bool_if_p:N \l__msz_script_plus_bool }
         }
+      \bool_if:NTF \l__msz_script_nested_bool
+        { \tl_set:Nn \l__msz_script_nuc_tl { \symnormal {#5} } }
+        { \tl_set:Nn \l__msz_script_nuc_tl {#5} }
       \__msz_script_store:nnn { ll } {#1} {#2}
       \__msz_script_store:nnn { ul } {#3} {#4}
       \__msz_script_store:nnn { lr } {#6} {#7}
@@ -1063,10 +1080,10 @@
           \mathord
             {
               \mathchoice
-                { \__msz_script_build:nnnNN {#5} { math } { display }      \displaystyle      \scriptstyle       }
-                { \__msz_script_build:nnnNN {#5} { text } { text }         \textstyle         \scriptstyle       }
-                { \__msz_script_build:nnnNN {#5} { text } { script }       \scriptstyle       \scriptscriptstyle }
-                { \__msz_script_build:nnnNN {#5} { text } { scriptscript } \scriptscriptstyle \scriptscriptstyle }
+                { \__msz_script_build:nnnNN { \l__msz_script_nuc_tl } { math } { display }      \displaystyle      \scriptstyle       }
+                { \__msz_script_build:nnnNN { \l__msz_script_nuc_tl } { text } { text }         \textstyle         \scriptstyle       }
+                { \__msz_script_build:nnnNN { \l__msz_script_nuc_tl } { text } { script }       \scriptstyle       \scriptscriptstyle }
+                { \__msz_script_build:nnnNN { \l__msz_script_nuc_tl } { text } { scriptscript } \scriptscriptstyle \scriptscriptstyle }
             }
         }
       \group_end:
@@ -1729,8 +1746,9 @@
 % registered in \msz@local@<new>.
 %
 % The package predefines, right after \zlocal, the prefixes \zref {expr}
-% (zscript-reference) and \zwrapper {macro} (zscript-wrapper). They are
-% ordinary prefixes, so a user may redefine them.
+% (zscript-reference), \zwrapper {macro} (zscript-wrapper), and \zbefore
+% {ratio} and \zafter {ratio} (the before/after of zscript, zprime, zlim and
+% zint, in both modes). They are ordinary prefixes, so a user may redefine them.
 % ==============================================================================
 
   \tl_new:N    \l__msz_local_new_tl
@@ -1962,9 +1980,11 @@
   \NewDocumentCommand \zlocal { m m m }
     { \__msz_local_define:Nnn #1 {#2} {#3} }
 
-  % predefined prefixes for the options of \zscript most often set per call
+  % predefined prefixes for the options most often set per call
   \zlocal{\zref}{zscript}{reference=#1}
   \zlocal{\zwrapper}{zscript}{wrapper=#1}
+  \zlocal{\zbefore}{zscript, zprime, zlim, zint}{math-before=#1, text-before=#1}
+  \zlocal{\zafter}{zscript, zprime, zlim, zint}{math-after=#1, text-after=#1}
 
 % ==============================================================================
 % \zalias {new} {base} {key=value,...}
@@ -1980,6 +2000,9 @@
 % its flattened, prefixed key list (the keys of its base first) in
 % \msz@alias@keys@<new>. The alias macro hands the list to \g__msz_alias_tl
 % and calls the root command, whose \__msz_begin:n consumes it.
+%
+% The package predefines, right after \zalias, the alias \zdell of \zdiff
+% (zdiff-symbol=\partial).
 % ==============================================================================
 
   \tl_new:N \l__msz_alias_new_tl
@@ -2074,6 +2097,9 @@
 
   \NewDocumentCommand \zalias { m m m }
     { \__msz_alias_define:NNn #1 #2 {#3} }
+
+  % predefined alias for partial differentials and derivatives
+  \zalias{\zdell}{\zdiff}{symbol=\partial}
 
 \ExplSyntaxOff
 

@@ -25,6 +25,7 @@ them a unified style and keeps them distinct from other commands.
 
 - `\zint` — integrals: single, multiple, contour or bridged; slant, stacked or right-side limits
 - `\zdiff` — differentials and derivatives
+- `\zdell` — partial differentials and derivatives
 - `\zfrac` — fractions (`\frac`, `\nicefrac` or slash) with optional parentheses
 - `\zscript` — up to four scripts around a nucleus
 - `\zprime` — primes as superscript or accent
@@ -35,7 +36,8 @@ them a unified style and keeps them distinct from other commands.
 - `\zscale` — style-aware scaling of math content
 - `\zline`, `\zvec`, `\zmat` — stacked underlines for vectors and matrices
 - `\zpunct` — punctuation at the end of a display line
-- `\zlocal`, `\zref`, `\zwrapper` — prefixes that change options for the next call of a command only
+- `\zlocal` — prefixes that change options for the next call of a command
+- `\zbefore`, `\zafter`, `\zref`, `\zwrapper` — predefined prefixes for common adjustments
 - `\zalias` — variants of any command with their own option values
 
 ```latex
